@@ -32,6 +32,9 @@
             },
             {
               "name": "campana"
+            },
+            {
+              "name": "pais"
             }
           ]
         }
@@ -47,7 +50,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ======================\n// CAPTURAR UBICACIÓN ORIGINAL\n// ======================\nconst ubicacionOriginalTexto = ($json[\"Ubicación\"] || \"\");\n\n// ======================\n// FUNCIÓN DE NORMALIZACIÓN MEJORADA\n// ======================\nfunction norm(s) {\n  return (s || \"\")\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\") // Quita tildes\n    .replace(/[,.-]/g, \" \") // Cambia signos de puntuación por espacios\n    .replace(/\\s+/g, \" \") // Limpia espacios dobles\n    .trim();\n}\n\n// ======================\n// FUNCIÓN PARA CAPITALIZAR\n// ======================\nconst capitalizar = (str) => {\n  if (!str) return \"\";\n  return str.toString().trim().split(\" \")\n    .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())\n    .join(\" \");\n};\n\n// ======================\n// VALIDAR Y NORMALIZAR RIF\n// ======================\nlet rif = ($json[\"RIF\"] || \"\")\n  .toString()\n  .trim()\n  .toUpperCase()\n  .replace(/\\s+/g, \"\");\n\nif (!rif.startsWith(\"J-\")) {\n  rif = rif.replace(/^[A-Z]-?/i, \"\");\n  rif = `J-${rif}`;\n}\n\n// ======================\n// VALIDAR Y NORMALIZAR WHATSAPP\n// ======================\nlet whatsapp = ($json[\"WhatsApp\"] || \"\").toString().trim().replace(/\\s+/g, \"\");\n\nif (whatsapp) {\n  if (whatsapp.startsWith('0') || whatsapp.startsWith('58')) {\n    whatsapp = '+' + whatsapp;\n  } else if (whatsapp.startsWith('4')) {\n    whatsapp = '0' + whatsapp;\n  }\n}\n\n// ======================\n// ESTADOS CON TILDE PARA OUTPUT\n// ======================\nconst estadosMap = {\n  \"amazonas\":        \"Amazonas\",\n  \"anzoategui\":      \"Anzoátegui\",\n  \"apure\":           \"Apure\",\n  \"aragua\":          \"Aragua\",\n  \"barinas\":         \"Barinas\",\n  \"bolivar\":         \"Bolívar\",\n  \"carabobo\":        \"Carabobo\",\n  \"cojedes\":         \"Cojedes\",\n  \"delta amacuro\":   \"Delta Amacuro\",\n  \"distrito capital\":\"Caracas\",\n  \"caracas\":         \"Caracas\",\n  \"falcon\":          \"Falcón\",\n  \"guarico\":         \"Guárico\",\n  \"lara\":            \"Lara\",\n  \"merida\":          \"Mérida\",\n  \"miranda\":         \"Miranda\",\n  \"monagas\":         \"Monagas\",\n  \"nueva esparta\":   \"Nueva Esparta\",\n  \"portuguesa\":      \"Portuguesa\",\n  \"sucre\":           \"Sucre\",\n  \"tachira\":         \"Táchira\",\n  \"trujillo\":        \"Trujillo\",\n  \"la guaira\":       \"La Guaira\",\n  \"yaracuy\":         \"Yaracuy\",\n  \"zulia\":           \"Zulia\"\n};\n\n// ======================\n// ALIASES CIUDAD → ESTADO\n// ======================\nconst aliases = {\n  \"ccs\":              \"caracas\",\n  \"distrito capital\": \"caracas\",\n  \"chacao\":           \"caracas\",\n  \"baruta\":           \"caracas\",\n  \"el hatillo\":       \"caracas\",\n  \"dtto capital\":     \"caracas\",\n  \"chacaito\":         \"caracas\",\n  \"altamira\":         \"caracas\",\n  \"sabana grande\":    \"caracas\",\n  \"las mercedes\":     \"caracas\",\n  \"Caracas ,\":        \"caracas\",\n  \"valencia\":         \"carabobo\",\n  \"guacara\":          \"carabobo\",\n  \"los guayos\":       \"carabobo\",\n  \"maracay\":          \"aragua\",\n  \"turmero\":          \"aragua\",\n  \"cagua\":            \"aragua\",\n  \"maracaibo\":        \"zulia\",\n  \"cabimas\":          \"zulia\",\n  \"ciudad ojeda\":     \"zulia\",\n  \"barquisimeto\":     \"lara\",\n  \"cabudare\":         \"lara\",\n  \"pto ordaz\":        \"bolivar\",\n  \"puerto ordaz\":     \"bolivar\",\n  \"ciudad bolivar\":   \"bolivar\",\n  \"ciudad guayana\":   \"bolivar\",\n  \"san felix\":        \"bolivar\",\n  \"pto la cruz\":      \"anzoategui\",\n  \"puerto la cruz\":   \"anzoategui\",\n  \"barcelona\":        \"anzoategui\",\n  \"el tigre\":         \"anzoategui\",\n  \"los teques\":       \"miranda\",\n  \"guarenas\":         \"miranda\",\n  \"guatire\":          \"miranda\",\n  \"ocumare del tuy\":  \"miranda\",\n  \"petare\":           \"miranda\",\n  \"san cristobal\":    \"tachira\",\n  \"maturin\":          \"monagas\",\n  \"cumana\":           \"sucre\",\n  \"porlamar\":         \"nueva esparta\",\n  \"la asuncion\":      \"nueva esparta\",\n  \"maiquetia\":        \"la guaira\",\n  \"catia la mar\":     \"la guaira\",\n  \"coro\":             \"falcon\",\n  \"tucacas\":          \"falcon\",\n  \"valera\":           \"trujillo\",\n  \"acarigua\":         \"portuguesa\",\n  \"araure\":           \"portuguesa\",\n  \"san felipe\":       \"yaracuy\",\n  \"san fernando de apure\": \"apure\",\n  \"san fernando\":     \"apure\",\n  \"san carlos\":       \"cojedes\",\n  \"tucupita\":         \"delta amacuro\",\n  \"puerto ayacucho\":  \"amazonas\"\n};\n\nconst ubicacionNorm = norm(ubicacionOriginalTexto);\nlet claveEstado = null;\n\nfor (const clave of Object.keys(estadosMap)) {\n  const regex = new RegExp(`\\\\b${clave}\\\\b`, 'i');\n  if (regex.test(ubicacionNorm)) {\n    claveEstado = clave;\n    break;\n  }\n}\n\nif (!claveEstado) {\n  for (const [alias, clave] of Object.entries(aliases)) {\n    const regex = new RegExp(`\\\\b${alias}\\\\b`, 'i');\n    if (regex.test(ubicacionNorm)) {\n      claveEstado = clave;\n      break;\n    }\n  }\n}\n\nconst estadoDetectado = claveEstado ? estadosMap[claveEstado] : \"Sin Asignar\";\n\nlet interes = $json[\"Interes\"] || \"\";\nif (Array.isArray(interes)) {\n  interes = interes.join(\", \");\n} else if (typeof interes === \"string\") {\n  try {\n    const parsed = JSON.parse(interes);\n    if (Array.isArray(parsed)) interes = parsed.join(\", \");\n  } catch (e) {\n    interes = interes.trim();\n  }\n}\n\nconst tipo = ($json[\"Tipo\"] || \"\").toString().trim().toUpperCase();\n\nconst { \"Ubicación\": _, ...restoDatos } = $json;\n\nreturn [{\n  json: {\n    ...restoDatos,\n    \"Nombre de la empresa\": capitalizar($json[\"Nombre de la empresa\"] || \"\"),\n    RIF: rif,\n    WhatsApp: whatsapp,\n    \"Ubicacion detalle\": ubicacionOriginalTexto,\n    Estado: estadoDetectado,\n    Interes: interes,\n    Tipo: tipo\n  }\n}];"
+        "jsCode": "const ubicacionOriginalTexto = ($json[\"Ubicación\"] || \"\");\nconst pais = ($json[\"pais\"] || \"VE\").toString().trim().toUpperCase();\n\nfunction norm(s) {\n  return (s || \"\")\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/[,.-]/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nconst capitalizar = (str) => {\n  if (!str) return \"\";\n  return str.toString().trim().split(\" \")\n    .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())\n    .join(\" \");\n};\n\nlet documento = ($json[\"RIF\"] || \"\").toString().trim();\nlet whatsapp = ($json[\"WhatsApp\"] || \"\").toString().trim().replace(/\\s+/g, \"\");\n\nif (pais === \"PA\") {\n  // Panama: RUC se deja tal como viene\n  // Telefono: asegurar prefijo +507\n  const digits = whatsapp.replace(/\\D/g, \"\");\n  whatsapp = digits.startsWith(\"507\") ? \"+\" + digits : \"+507\" + digits;\n} else {\n  // Venezuela: normalizar RIF a J-XXXXXXXX\n  let rif = documento.toUpperCase().replace(/\\s+/g, \"\");\n  if (!rif.startsWith(\"J-\")) {\n    rif = rif.replace(/^[A-Z]-?/i, \"\");\n    rif = `J-${rif}`;\n  }\n  documento = rif;\n  // Venezuela: normalizar telefono a +58XXXXXXXXXX\n  if (whatsapp) {\n    if (whatsapp.startsWith('0') || whatsapp.startsWith('58')) {\n      whatsapp = '+' + whatsapp;\n    } else if (whatsapp.startsWith('4')) {\n      whatsapp = '0' + whatsapp;\n    }\n  }\n}\n\nconst estadosMapVE = {\n  \"amazonas\": \"Amazonas\", \"anzoategui\": \"Anzoátegui\", \"apure\": \"Apure\",\n  \"aragua\": \"Aragua\", \"barinas\": \"Barinas\", \"bolivar\": \"Bolívar\",\n  \"carabobo\": \"Carabobo\", \"cojedes\": \"Cojedes\", \"delta amacuro\": \"Delta Amacuro\",\n  \"distrito capital\": \"Caracas\", \"caracas\": \"Caracas\", \"falcon\": \"Falcón\",\n  \"guarico\": \"Guárico\", \"lara\": \"Lara\", \"merida\": \"Mérida\",\n  \"miranda\": \"Miranda\", \"monagas\": \"Monagas\", \"nueva esparta\": \"Nueva Esparta\",\n  \"portuguesa\": \"Portuguesa\", \"sucre\": \"Sucre\", \"tachira\": \"Táchira\",\n  \"trujillo\": \"Trujillo\", \"la guaira\": \"La Guaira\", \"yaracuy\": \"Yaracuy\",\n  \"zulia\": \"Zulia\"\n};\n\nconst aliasesVE = {\n  \"ccs\": \"caracas\", \"chacao\": \"caracas\", \"baruta\": \"caracas\",\n  \"el hatillo\": \"caracas\", \"dtto capital\": \"caracas\", \"chacaito\": \"caracas\",\n  \"altamira\": \"caracas\", \"sabana grande\": \"caracas\", \"las mercedes\": \"caracas\",\n  \"valencia\": \"carabobo\", \"guacara\": \"carabobo\", \"los guayos\": \"carabobo\",\n  \"maracay\": \"aragua\", \"turmero\": \"aragua\", \"cagua\": \"aragua\",\n  \"maracaibo\": \"zulia\", \"cabimas\": \"zulia\", \"ciudad ojeda\": \"zulia\",\n  \"barquisimeto\": \"lara\", \"cabudare\": \"lara\",\n  \"pto ordaz\": \"bolivar\", \"puerto ordaz\": \"bolivar\", \"ciudad bolivar\": \"bolivar\",\n  \"ciudad guayana\": \"bolivar\", \"san felix\": \"bolivar\",\n  \"pto la cruz\": \"anzoategui\", \"puerto la cruz\": \"anzoategui\",\n  \"barcelona\": \"anzoategui\", \"el tigre\": \"anzoategui\",\n  \"los teques\": \"miranda\", \"guarenas\": \"miranda\", \"guatire\": \"miranda\",\n  \"ocumare del tuy\": \"miranda\", \"petare\": \"miranda\",\n  \"san cristobal\": \"tachira\", \"maturin\": \"monagas\", \"cumana\": \"sucre\",\n  \"porlamar\": \"nueva esparta\", \"la asuncion\": \"nueva esparta\",\n  \"maiquetia\": \"la guaira\", \"catia la mar\": \"la guaira\",\n  \"coro\": \"falcon\", \"tucacas\": \"falcon\", \"valera\": \"trujillo\",\n  \"acarigua\": \"portuguesa\", \"araure\": \"portuguesa\", \"san felipe\": \"yaracuy\",\n  \"san fernando de apure\": \"apure\", \"san fernando\": \"apure\",\n  \"san carlos\": \"cojedes\", \"tucupita\": \"delta amacuro\", \"puerto ayacucho\": \"amazonas\"\n};\n\nconst estadosMapPA = {\n  \"bocas del toro\": \"Bocas del Toro\", \"cocle\": \"Coclé\", \"colon\": \"Colón\",\n  \"chiriqui\": \"Chiriquí\", \"darien\": \"Darién\", \"herrera\": \"Herrera\",\n  \"los santos\": \"Los Santos\", \"panama\": \"Panamá\", \"panama oeste\": \"Panamá Oeste\",\n  \"veraguas\": \"Veraguas\", \"guna yala\": \"Guna Yala\",\n  \"ngabe bugle\": \"Ngäbe-Buglé\", \"embera wounaan\": \"Emberá-Wounaan\"\n};\n\nconst aliasesPA = {\n  \"ciudad de panama\": \"panama\", \"la chorrera\": \"panama oeste\",\n  \"arraijan\": \"panama oeste\", \"david\": \"chiriqui\",\n  \"penonome\": \"cocle\", \"santiago\": \"veraguas\",\n  \"chitre\": \"herrera\", \"las tablas\": \"los santos\",\n  \"la palma\": \"darien\", \"almirante\": \"bocas del toro\",\n  \"changuinola\": \"bocas del toro\", \"portobelo\": \"colon\",\n  \"santa fe\": \"veraguas\"\n};\n\nconst estadosMap = pais === \"PA\" ? estadosMapPA : estadosMapVE;\nconst aliases = pais === \"PA\" ? aliasesPA : aliasesVE;\n\nconst ubicacionNorm = norm(ubicacionOriginalTexto);\nlet claveEstado = null;\n\nfor (const clave of Object.keys(estadosMap)) {\n  if (new RegExp(`\\\\b${norm(clave)}\\\\b`).test(ubicacionNorm)) {\n    claveEstado = clave;\n    break;\n  }\n}\n\nif (!claveEstado) {\n  for (const [alias, clave] of Object.entries(aliases)) {\n    if (new RegExp(`\\\\b${norm(alias)}\\\\b`).test(ubicacionNorm)) {\n      claveEstado = clave;\n      break;\n    }\n  }\n}\n\nconst estadoDetectado = claveEstado ? estadosMap[claveEstado] : \"Sin Asignar\";\n\nlet interes = $json[\"Interes\"] || \"\";\nif (Array.isArray(interes)) {\n  interes = interes.join(\", \");\n} else if (typeof interes === \"string\") {\n  try {\n    const parsed = JSON.parse(interes);\n    if (Array.isArray(parsed)) interes = parsed.join(\", \");\n  } catch (e) {\n    interes = interes.trim();\n  }\n}\n\nconst tipo = ($json[\"Tipo\"] || \"\").toString().trim().toUpperCase();\nconst { \"Ubicación\": _, ...restoDatos } = $json;\n\nreturn [{\n  json: {\n    ...restoDatos,\n    pais: pais,\n    \"Nombre de la empresa\": capitalizar($json[\"Nombre de la empresa\"] || \"\"),\n    RIF: documento,\n    WhatsApp: whatsapp,\n    \"Ubicacion detalle\": ubicacionOriginalTexto,\n    Estado: estadoDetectado,\n    Interes: interes,\n    Tipo: tipo\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -57,6 +60,39 @@
       ],
       "id": "a0b18290-6cc8-4f1d-8bd2-9dfbd2e2b23f",
       "name": "Normalizar Datos del Lead"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-pais-pa",
+              "leftValue": "={{ $json.pais }}",
+              "rightValue": "PA",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -848,
+        0
+      ],
+      "id": "if-switch-pais-pa",
+      "name": "Switch País"
     },
     {
       "parameters": {
@@ -104,11 +140,74 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -848,
-        0
+        -640,
+        -96
       ],
       "id": "e5a47305-acd3-4727-b290-e01c74af0b94",
       "name": "¿Es Caracas / Carabobo?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CALL asignar_vendedor_rotacion_carcar('{{ $json.Estado }}')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -432,
+        -208
+      ],
+      "id": "c8609a8a-72f2-43eb-afb6-10e32b4812d0",
+      "name": "Asignar Vendedor Carcar",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CALL asignar_vendedor_rotacion('{{ $json.Estado }}')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -432,
+        0
+      ],
+      "id": "fc8615e1-e590-497e-908e-80db9e4ba770",
+      "name": "Asignar Vendedor Otros Estados",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CALL asignar_vendedor_rotacion_pa()",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -432,
+        208
+      ],
+      "id": "mysql-asignar-vendedor-pa",
+      "name": "Asignar Vendedor Panama",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
     },
     {
       "parameters": {
@@ -117,8 +216,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -432,
-        -112
+        -208,
+        -208
       ],
       "id": "9fd38470-c605-4b3e-9f0b-d893e8b6ed8a",
       "name": "Armar Datos Vendedor Carcar"
@@ -130,11 +229,24 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -464,
-        96
+        -208,
+        0
       ],
       "id": "d7cfa511-2d62-4431-8928-073427cc79f6",
       "name": "Armar Datos Vendedor Otros"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mysqlOutput = $('Asignar Vendedor Panama').item.json;\nconst seller_id = mysqlOutput.seller_id || (mysqlOutput[0] && mysqlOutput[0].seller_id);\nconst name = mysqlOutput.name || (mysqlOutput[0] && mysqlOutput[0].name);\nconst asignacion = mysqlOutput.asignacion || (mysqlOutput[0] && mysqlOutput[0].asignacion);\nconst leadData = $('Normalizar Datos del Lead').item.json;\nconst digits = (leadData.WhatsApp || \"\").toString().replace(/\\D/g, \"\");\nconst nombreVendedor = name || \"nuestro equipo\";\nconst mensaje = `Hola, soy ${nombreVendedor} de Supricom. El equipo de marketing me envió tus datos para darte atención prioritaria. Mi objetivo es asegurar que tu negocio cuente con el respaldo de un mayorista en tecnología que necesitas.`;\nconst whatsappLink = `https://wa.me/${digits}?text=${encodeURIComponent(mensaje)}`;\nreturn [{ json: { ...leadData, Vendedor: name || \"No asignado\", seller_id: seller_id || 0, AsignacionActual: parseInt(asignacion) || 0, WhatsAppLink: whatsappLink } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        208
+      ],
+      "id": "code-armar-datos-vendedor-pa",
+      "name": "Armar Datos Vendedor Panama"
     },
     {
       "parameters": {
@@ -225,8 +337,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -64,
-        -112
+        64,
+        -208
       ],
       "id": "e33a6f20-a7f0-428a-b5c1-c88adc495e96",
       "name": "Mapear Campos Carcar"
@@ -326,116 +438,125 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -64,
-        96
+        64,
+        0
       ],
       "id": "6a4d4d72-97cf-41e9-9ff2-8f56d2e3a748",
       "name": "Mapear Campos Otros"
     },
     {
       "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "pa-set-contacto",
+              "name": "Nombre de Contacto",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json['Nombre de Contacto'] }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-empresa",
+              "name": "Nombre de la empresa",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json['Nombre de la empresa'] }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-rif",
+              "name": "RIF",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.RIF }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-whatsapp",
+              "name": "WhatsApp",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.WhatsApp }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-ubicacion",
+              "name": "Ubicacion detalle",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json['Ubicacion detalle'] }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-estado",
+              "name": "Estado",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.Estado }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-interes",
+              "name": "Interes",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.Interes }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-vendedor",
+              "name": "Vendedor",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.Vendedor }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-seller-id",
+              "name": "seller_id",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.seller_id }}",
+              "type": "number"
+            },
+            {
+              "id": "pa-set-wa-link",
+              "name": "WhatsAppLink",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.WhatsAppLink }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-canal",
+              "name": "Canal",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.Canal }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-tipo",
+              "name": "Tipo",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.Tipo }}",
+              "type": "string"
+            },
+            {
+              "id": "pa-set-campana",
+              "name": "campana",
+              "value": "={{ $('Armar Datos Vendedor Panama').item.json.campana }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        64,
+        208
+      ],
+      "id": "set-mapear-campos-pa",
+      "name": "Mapear Campos Panama"
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "CALL asignar_vendedor_rotacion_carcar('{{ $json.Estado }}')",
+        "query": "SELECT uc.email FROM sellers s JOIN users_config uc ON s.user_id = uc.id WHERE s.id = {{ $('Mapear Campos Carcar').item.json.seller_id }} LIMIT 1;",
         "options": {}
       },
       "type": "n8n-nodes-base.mySql",
       "typeVersion": 2.5,
       "position": [
-        -640,
-        -112
+        288,
+        -208
       ],
-      "id": "c8609a8a-72f2-43eb-afb6-10e32b4812d0",
-      "name": "Asignar Vendedor Carcar",
+      "id": "bd86f23a-02f9-41cd-adba-253304b6fb72",
+      "name": "Obtener Email Vendedor Carcar",
       "credentials": {
         "mySql": {
           "id": "D2jBVXzwxDQKZNau",
           "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO leads (\n    fecha_ingreso, nombre_contacto, name, rif, telefono, \n    ubicacion_detalle, ubicacion_estado, seller_id, \n    whatsapp_link, status, canal_origen, campana, interes, identidad\n) VALUES (\n    NOW(), \n    '{{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Carcar').item.json[' Nombre de la empresa'].replace(/'/g, \"''\") }}',\n    '{{ $('Mapear Campos Carcar').item.json.RIF }}', \n    '{{ $('Mapear Campos Carcar').item.json.WhatsApp }}', \n    '{{ $('Mapear Campos Carcar').item.json['Ubicacion detalle'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Carcar').item.json.Estado }}', \n     {{ $('Mapear Campos Carcar').item.json.seller_id }}, \n    '{{ $('Mapear Campos Carcar').item.json.WhatsAppLink }}', \n    'NUEVO',\n    '{{ $('Mapear Campos Carcar').item.json.Canal }}',\n    {{ $('Mapear Campos Carcar').item.json.campana ? `'${$('Mapear Campos Carcar').item.json.campana.replace(/'/g, \"''\")}'` : 'NULL' }},\n    '{{ $('Mapear Campos Carcar').item.json.Interes }}',\n    '{{ $('Mapear Campos Carcar').item.json.Tipo }}'\n);",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.5,
-      "position": [
-        352,
-        -112
-      ],
-      "id": "30bf543b-f109-4aec-8910-73a11bc7e36d",
-      "name": "Registrar Lead Carcar en BD",
-      "credentials": {
-        "mySql": {
-          "id": "D2jBVXzwxDQKZNau",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "CALL asignar_vendedor_rotacion('{{ $json.Estado }}')",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.5,
-      "position": [
-        -640,
-        96
-      ],
-      "id": "fc8615e1-e590-497e-908e-80db9e4ba770",
-      "name": "Asignar Vendedor Otros Estados",
-      "credentials": {
-        "mySql": {
-          "id": "D2jBVXzwxDQKZNau",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO leads (\n    fecha_ingreso, nombre_contacto, name, rif, telefono, \n    ubicacion_detalle, ubicacion_estado, seller_id, \n    whatsapp_link, status, canal_origen, campana, interes, identidad\n) VALUES (\n    NOW(), \n    '{{ $('Mapear Campos Otros').item.json['Nombre de Contacto'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Otros').item.json['Nombre de la empresa'].replace(/'/g, \"''\") }}',\n    '{{ $('Mapear Campos Otros').item.json.RIF }}', \n    '{{ $('Mapear Campos Otros').item.json.WhatsApp }}', \n    '{{ $('Mapear Campos Otros').item.json['Ubicacion detalle'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Otros').item.json.Estado }}', \n     {{ $('Mapear Campos Otros').item.json.seller_id }}, \n    '{{ $('Mapear Campos Otros').item.json.WhatsAppLink }}', \n    'NUEVO',\n    '{{ $('Mapear Campos Otros').item.json.Canal }}',\n    {{ $('Mapear Campos Otros').item.json.campana ? `'${$('Mapear Campos Otros').item.json.campana.replace(/'/g, \"''\")}'` : 'NULL' }},\n    '{{ $('Mapear Campos Otros').item.json.Interes }}',\n    '{{ $('Mapear Campos Otros').item.json.Tipo }}'\n);",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.5,
-      "position": [
-        352,
-        96
-      ],
-      "id": "e072d718-5297-41b8-9c6e-06fa8b393b66",
-      "name": "Registrar Lead Otros en BD",
-      "credentials": {
-        "mySql": {
-          "id": "D2jBVXzwxDQKZNau",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "sendTo": "={{ $('Obtener Email Vendedor Carcar').item.json.email }}",
-        "subject": "=🦁 Nuevo Lead Asignado — {{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }} ({{ $('Mapear Campos Carcar').item.json['Estado'] }})",
-        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Carcar').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Empresa</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json[' Nombre de la empresa'] }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">RIF</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.RIF }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.WhatsApp }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Carcar').item.json.Estado }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Interés</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.Interes }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Campaña</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.campana || 'Orgánico' }}</td></tr>\n    </table>\n    <div style=\"margin:24px 0;text-align:center\">\n      <a href=\"{{ $('Mapear Campos Carcar').item.json.WhatsAppLink }}\" style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;max-width:80%;line-height:1.4;word-break:break-word\">📲 Abrir WhatsApp con mensaje listo</a>\n    </div>\n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para maximizar las posibilidades de cierre.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\"><p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p></div>\n</div>",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
-      "position": [
-        768,
-        -112
-      ],
-      "id": "77ce60b3-ebab-44f9-ab32-976e99d3338b",
-      "name": "Email Notificación Carcar",
-      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "km7PyKWLEZgHHMzw",
-          "name": "chatgprsupricom@gmail.com"
         }
       }
     },
@@ -448,8 +569,8 @@
       "type": "n8n-nodes-base.mySql",
       "typeVersion": 2.5,
       "position": [
-        160,
-        96
+        288,
+        0
       ],
       "id": "2566fb18-055d-481e-8dfc-532a13d9e720",
       "name": "Obtener Email Vendedor Otros",
@@ -463,17 +584,17 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT uc.email FROM sellers s JOIN users_config uc ON s.user_id = uc.id WHERE s.id = {{ $('Mapear Campos Carcar').item.json.seller_id }} LIMIT 1;",
+        "query": "SELECT uc.email FROM sellers s JOIN users_config uc ON s.user_id = uc.id WHERE s.id = {{ $('Mapear Campos Panama').item.json.seller_id }} LIMIT 1;",
         "options": {}
       },
       "type": "n8n-nodes-base.mySql",
       "typeVersion": 2.5,
       "position": [
-        160,
-        -112
+        288,
+        208
       ],
-      "id": "bd86f23a-02f9-41cd-adba-253304b6fb72",
-      "name": "Obtener Email Vendedor Carcar",
+      "id": "mysql-obtener-email-vendedor-pa",
+      "name": "Obtener Email Vendedor Panama",
       "credentials": {
         "mySql": {
           "id": "D2jBVXzwxDQKZNau",
@@ -483,24 +604,64 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $('Obtener Email Vendedor Otros').item.json.email }}",
-        "subject": "=🦁 Nuevo Lead Asignado — {{ $('Mapear Campos Otros').item.json['Nombre de Contacto'] }} ({{ $('Mapear Campos Otros').item.json['Estado'] }})",
-        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Otros').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Nombre de Contacto'] }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Empresa</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Nombre de la empresa'] }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">RIF</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.RIF }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.WhatsApp }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Otros').item.json.Estado }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Interés</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.Interes }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Tipo</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.Tipo }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Campaña</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.campana || 'Orgánico' }}</td></tr>\n    </table>\n    <div style=\"margin:24px 0;text-align:center\">\n      <a href=\"{{ $('Mapear Campos Otros').item.json.WhatsAppLink }}\" style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;max-width:80%;line-height:1.4;word-break:break-word\">📲 Abrir WhatsApp con mensaje listo</a>\n    </div>\n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para maximizar las posibilidades de cierre.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\"><p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p></div>\n</div>",
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (\n    fecha_ingreso, nombre_contacto, name, rif, telefono, \n    ubicacion_detalle, ubicacion_estado, seller_id, \n    whatsapp_link, status, canal_origen, campana, interes, identidad, pais\n) VALUES (\n    NOW(), \n    '{{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Carcar').item.json[' Nombre de la empresa'].replace(/'/g, \"''\") }}',\n    '{{ $('Mapear Campos Carcar').item.json.RIF }}', \n    '{{ $('Mapear Campos Carcar').item.json.WhatsApp }}', \n    '{{ $('Mapear Campos Carcar').item.json['Ubicacion detalle'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Carcar').item.json.Estado }}', \n     {{ $('Mapear Campos Carcar').item.json.seller_id }}, \n    '{{ $('Mapear Campos Carcar').item.json.WhatsAppLink }}', \n    'NUEVO',\n    '{{ $('Mapear Campos Carcar').item.json.Canal }}',\n    {{ $('Mapear Campos Carcar').item.json.campana ? `'${$('Mapear Campos Carcar').item.json.campana.replace(/'/g, \"''\")}'` : 'NULL' }},\n    '{{ $('Mapear Campos Carcar').item.json.Interes }}',\n    '{{ $('Mapear Campos Carcar').item.json.Tipo }}',\n    'VE'\n);",
         "options": {}
       },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
       "position": [
-        768,
-        96
+        512,
+        -208
       ],
-      "id": "f6a87f0e-a4e1-481d-979e-8cab78edb664",
-      "name": "Email Notificación Otros",
-      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "id": "30bf543b-f109-4aec-8910-73a11bc7e36d",
+      "name": "Registrar Lead Carcar en BD",
       "credentials": {
-        "gmailOAuth2": {
-          "id": "km7PyKWLEZgHHMzw",
-          "name": "chatgprsupricom@gmail.com"
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (\n    fecha_ingreso, nombre_contacto, name, rif, telefono, \n    ubicacion_detalle, ubicacion_estado, seller_id, \n    whatsapp_link, status, canal_origen, campana, interes, identidad, pais\n) VALUES (\n    NOW(), \n    '{{ $('Mapear Campos Otros').item.json['Nombre de Contacto'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Otros').item.json['Nombre de la empresa'].replace(/'/g, \"''\") }}',\n    '{{ $('Mapear Campos Otros').item.json.RIF }}', \n    '{{ $('Mapear Campos Otros').item.json.WhatsApp }}', \n    '{{ $('Mapear Campos Otros').item.json['Ubicacion detalle'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Otros').item.json.Estado }}', \n     {{ $('Mapear Campos Otros').item.json.seller_id }}, \n    '{{ $('Mapear Campos Otros').item.json.WhatsAppLink }}', \n    'NUEVO',\n    '{{ $('Mapear Campos Otros').item.json.Canal }}',\n    {{ $('Mapear Campos Otros').item.json.campana ? `'${$('Mapear Campos Otros').item.json.campana.replace(/'/g, \"''\")}'` : 'NULL' }},\n    '{{ $('Mapear Campos Otros').item.json.Interes }}',\n    '{{ $('Mapear Campos Otros').item.json.Tipo }}',\n    'VE'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        512,
+        0
+      ],
+      "id": "e072d718-5297-41b8-9c6e-06fa8b393b66",
+      "name": "Registrar Lead Otros en BD",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (\n    fecha_ingreso, nombre_contacto, name, rif, telefono, \n    ubicacion_detalle, ubicacion_estado, seller_id, \n    whatsapp_link, status, canal_origen, campana, interes, identidad, pais\n) VALUES (\n    NOW(), \n    '{{ $('Mapear Campos Panama').item.json['Nombre de Contacto'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Panama').item.json['Nombre de la empresa'].replace(/'/g, \"''\") }}',\n    '{{ $('Mapear Campos Panama').item.json.RIF }}', \n    '{{ $('Mapear Campos Panama').item.json.WhatsApp }}', \n    '{{ $('Mapear Campos Panama').item.json['Ubicacion detalle'].replace(/'/g, \"''\") }}', \n    '{{ $('Mapear Campos Panama').item.json.Estado }}', \n     {{ $('Mapear Campos Panama').item.json.seller_id }}, \n    '{{ $('Mapear Campos Panama').item.json.WhatsAppLink }}', \n    'NUEVO',\n    '{{ $('Mapear Campos Panama').item.json.Canal }}',\n    {{ $('Mapear Campos Panama').item.json.campana ? `'${$('Mapear Campos Panama').item.json.campana.replace(/'/g, \"''\")}'` : 'NULL' }},\n    '{{ $('Mapear Campos Panama').item.json.Interes }}',\n    '{{ $('Mapear Campos Panama').item.json.Tipo }}',\n    'PA'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        512,
+        208
+      ],
+      "id": "mysql-registrar-lead-pa",
+      "name": "Registrar Lead Panama en BD",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
         }
       }
     },
@@ -522,8 +683,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        560,
-        -112
+        736,
+        -208
       ],
       "id": "22c0195a-e383-4ea3-a907-71803e69bfd8",
       "name": "HTTP Request"
@@ -546,11 +707,104 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        560,
-        96
+        736,
+        0
       ],
       "id": "3df9f5b3-7f6c-48cc-a94a-84d3653e68fc",
       "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://panel.supricom.com.ve/api/webhooks/leads-notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "Auto.OSC2026"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        736,
+        208
+      ],
+      "id": "http-request-pa",
+      "name": "HTTP Request Panama"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Obtener Email Vendedor Carcar').item.json.email }}",
+        "subject": "=🦁 Nuevo Lead Asignado — {{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }} ({{ $('Mapear Campos Carcar').item.json['Estado'] }})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Carcar').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Empresa</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json[' Nombre de la empresa'] }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">RIF</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.RIF }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.WhatsApp }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Carcar').item.json.Estado }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Interés</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.Interes }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Campaña</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.campana || 'Orgánico' }}</td></tr>\n    </table>\n    <div style=\"margin:24px 0;text-align:center\">\n      <a href=\"{{ $('Mapear Campos Carcar').item.json.WhatsAppLink }}\" style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;max-width:80%;line-height:1.4;word-break:break-word\">📲 Abrir WhatsApp con mensaje listo</a>\n    </div>\n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para maximizar las posibilidades de cierre.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\"><p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p></div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        -208
+      ],
+      "id": "77ce60b3-ebab-44f9-ab32-976e99d3338b",
+      "name": "Email Notificación Carcar",
+      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Obtener Email Vendedor Otros').item.json.email }}",
+        "subject": "=🦁 Nuevo Lead Asignado — {{ $('Mapear Campos Otros').item.json['Nombre de Contacto'] }} ({{ $('Mapear Campos Otros').item.json['Estado'] }})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Otros').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Nombre de Contacto'] }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Empresa</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Nombre de la empresa'] }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">RIF</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.RIF }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.WhatsApp }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Otros').item.json.Estado }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Interés</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.Interes }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Tipo</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.Tipo }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Campaña</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.campana || 'Orgánico' }}</td></tr>\n    </table>\n    <div style=\"margin:24px 0;text-align:center\">\n      <a href=\"{{ $('Mapear Campos Otros').item.json.WhatsAppLink }}\" style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;max-width:80%;line-height:1.4;word-break:break-word\">📲 Abrir WhatsApp con mensaje listo</a>\n    </div>\n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para maximizar las posibilidades de cierre.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\"><p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p></div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "f6a87f0e-a4e1-481d-979e-8cab78edb664",
+      "name": "Email Notificación Otros",
+      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Obtener Email Vendedor Panama').item.json.email }}",
+        "subject": "=🦁 Nuevo Lead PA Asignado — {{ $('Mapear Campos Panama').item.json['Nombre de Contacto'] }} ({{ $('Mapear Campos Panama').item.json['Estado'] }})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM Panamá — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Panama').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead de Panamá. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Panama').item.json['Nombre de Contacto'] }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Empresa</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Panama').item.json['Nombre de la empresa'] }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">RUC</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Panama').item.json.RIF }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Panama').item.json.WhatsApp }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Provincia</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Panama').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Panama').item.json.Estado }}</td></tr>\n      <tr><td style=\"padding:8px 12px;font-weight:bold\">Interés</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Panama').item.json.Interes }}</td></tr>\n      <tr style=\"background:#f5f5f5\"><td style=\"padding:8px 12px;font-weight:bold\">Campaña</td><td style=\"padding:8px 12px\">{{ $('Mapear Campos Panama').item.json.campana || 'Orgánico' }}</td></tr>\n    </table>\n    <div style=\"margin:24px 0;text-align:center\">\n      <a href=\"{{ $('Mapear Campos Panama').item.json.WhatsAppLink }}\" style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;max-width:80%;line-height:1.4;word-break:break-word\">📲 Abrir WhatsApp con mensaje listo</a>\n    </div>\n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para maximizar las posibilidades de cierre.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\"><p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p></div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        208
+      ],
+      "id": "gmail-email-notif-pa",
+      "name": "Email Notificación Panama",
+      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -568,6 +822,24 @@
     },
     "Normalizar Datos del Lead": {
       "main": [
+        [
+          {
+            "node": "Switch País",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch País": {
+      "main": [
+        [
+          {
+            "node": "Asignar Vendedor Panama",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "¿Es Caracas / Carabobo?",
@@ -589,50 +861,6 @@
         [
           {
             "node": "Asignar Vendedor Otros Estados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Armar Datos Vendedor Carcar": {
-      "main": [
-        [
-          {
-            "node": "Mapear Campos Carcar",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Armar Datos Vendedor Otros": {
-      "main": [
-        [
-          {
-            "node": "Mapear Campos Otros",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mapear Campos Carcar": {
-      "main": [
-        [
-          {
-            "node": "Obtener Email Vendedor Carcar",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mapear Campos Otros": {
-      "main": [
-        [
-          {
-            "node": "Obtener Email Vendedor Otros",
             "type": "main",
             "index": 0
           }
@@ -661,6 +889,83 @@
         ]
       ]
     },
+    "Asignar Vendedor Panama": {
+      "main": [
+        [
+          {
+            "node": "Armar Datos Vendedor Panama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Datos Vendedor Carcar": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Datos Vendedor Otros": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Otros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Datos Vendedor Panama": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Panama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Carcar": {
+      "main": [
+        [
+          {
+            "node": "Obtener Email Vendedor Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Otros": {
+      "main": [
+        [
+          {
+            "node": "Obtener Email Vendedor Otros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Panama": {
+      "main": [
+        [
+          {
+            "node": "Obtener Email Vendedor Panama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Obtener Email Vendedor Carcar": {
       "main": [
         [
@@ -677,6 +982,17 @@
         [
           {
             "node": "Registrar Lead Otros en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Email Vendedor Panama": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead Panama en BD",
             "type": "main",
             "index": 0
           }
@@ -705,6 +1021,17 @@
         ]
       ]
     },
+    "Registrar Lead Panama en BD": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request Panama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "HTTP Request": {
       "main": [
         [
@@ -721,6 +1048,17 @@
         [
           {
             "node": "Email Notificación Otros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Panama": {
+      "main": [
+        [
+          {
+            "node": "Email Notificación Panama",
             "type": "main",
             "index": 0
           }

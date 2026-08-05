@@ -195,6 +195,12 @@
               "name": "campaña",
               "value": "={{ (() => { try { const d = JSON.parse($('Consultar Campaña Meta').item.json.meta_campaign_data || 'null'); return d ? d.campaign_name : null; } catch(e) { return null; } })() }}",
               "type": "string"
+            },
+            {
+              "id": "d2e3f4a5-b6c7-8901-bcde-f01234567892",
+              "name": "pais",
+              "value": "={{ (() => { const inboxId = $('Mapear Datos del Cliente').item.json.inbox_id; /* TODO: reemplazar null con el inbox_id real de la bandeja PA una vez creada en Chatwoot (Settings → Inboxes → URL del inbox) */ const PA_INBOX_ID = null; return (PA_INBOX_ID !== null && inboxId === PA_INBOX_ID) ? 'PA' : 'VE'; })() }}",
+              "type": "string"
             }
           ]
         },
@@ -552,7 +558,8 @@
             "Canal": "={{ $fromAI(\"canal\") }}",
             "Interes": "={{ $fromAI(\"productos_interes\") }}",
             "Tipo": "={{ $fromAI(\"perfil_cliente\") }}",
-            "campana": "={{ $('Edit Fields5').item.json['campaña'] }}"
+            "campana": "={{ $('Edit Fields5').item.json['campaña'] }}",
+            "pais": "={{ $('Edit Fields5').item.json.pais }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -631,6 +638,15 @@
             {
               "id": "campana",
               "displayName": "campana",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "pais",
+              "displayName": "pais",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -722,6 +738,12 @@
               "name": "instagram_source_id",
               "value": "={{ $json.body.conversation.contact_inbox.source_id }}{{ $json.body.contact_inbox.source_id }}",
               "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567891",
+              "name": "inbox_id",
+              "value": "={{ $json.body.conversation.inbox_id }}{{ $json.body.inbox_id }}",
+              "type": "number"
             }
           ]
         },

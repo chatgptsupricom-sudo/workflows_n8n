@@ -1,0 +1,387 @@
+{
+  "name": "Send Resignation Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-notify-reasignation",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        -48
+      ],
+      "id": "73b7d336-f81e-4650-945a-8d4d0225ee75",
+      "name": "Webhook",
+      "webhookId": "8c47a8f0-1efa-4222-8f2b-10202dadc291"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT uc.email FROM sellers s JOIN users_config uc ON s.user_id = uc.id WHERE s.id = {{ $json.seller_id }} LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        496,
+        -48
+      ],
+      "id": "b4c9571c-ba5a-4f90-b9ae-04d3bb9b2c28",
+      "name": "Obtener Email Vendedor Carcar",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0eca315e-ae52-474a-a7ce-0d16c78e5d16",
+              "name": "Nombre de Contacto",
+              "value": "={{ $json.nombre_contacto }}",
+              "type": "string"
+            },
+            {
+              "id": "61a06b42-985e-4967-8721-1ffd2dbe3861",
+              "name": " Nombre de la empresa",
+              "value": "={{ $json.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "9c1f72c0-a074-400e-b162-d1a5aefa3765",
+              "name": "RIF",
+              "value": "={{ $json.rif }}",
+              "type": "string"
+            },
+            {
+              "id": "87656849-fcfc-4e62-b705-93b33bf8bfae",
+              "name": "WhatsApp",
+              "value": "={{ $json.telefono_local }}",
+              "type": "string"
+            },
+            {
+              "id": "d6425f3b-a161-4d96-8f0a-3279861628d6",
+              "name": "Ubicacion detalle",
+              "value": "={{ $json.ubicacion_detail }}",
+              "type": "string"
+            },
+            {
+              "id": "af108b89-0a45-46c1-b2ef-70f54e451869",
+              "name": "Estado",
+              "value": "={{ $json.ubicacion_estado }}",
+              "type": "string"
+            },
+            {
+              "id": "859b3238-3f56-4822-8956-9abe63da058d",
+              "name": "Vendedor",
+              "value": "={{ $json.vendedor }}",
+              "type": "string"
+            },
+            {
+              "id": "5f0bbf18-5038-4d87-a129-8f4ef70e2864",
+              "name": "seller_id",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.seller_id }}",
+              "type": "number"
+            },
+            {
+              "id": "49127637-430a-4016-b16d-80a1df232158",
+              "name": "WhatsAppLink",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.WhatsAppLink }}",
+              "type": "string"
+            },
+            {
+              "id": "39a8c299-305c-40a8-8cee-5cbf46206147",
+              "name": "Canal",
+              "value": "={{ $json.canal_origen }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        -48
+      ],
+      "id": "751ea3ca-53d9-4dff-8f78-94b8c821080b",
+      "name": "Mapear Campos Carcar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtener los datos directamente del input\nconst inputData = $input.item.json;\nconst body = inputData.body || {};\nconst lead = body.lead || {}; \n\n// 2. Extraer el objeto del nuevo vendedor de forma segura\nconst vendedorNuevo = body.vendedor_nuevo || {};\n\n// Extraer y formatear el nombre del NUEVO vendedor (Primera Letra Mayúscula)\nlet nameRaw = vendedorNuevo.nombre || body.vendedor || \"Nuestro Equipo\";\nconst name = nameRaw\n  .toLowerCase()\n  .split(' ')\n  .map(word => word.charAt(0).toUpperCase() + word.slice(1))\n  .join(' ');\n\n// 3. Extraer el seller_id del NUEVO vendedor (según la captura es 21)\nconst seller_id = vendedorNuevo.seller_id || lead.seller_id || 0;\nconst asignacion = lead.asignacion || 0; \n\n// 4. Lógica de saneamiento de WhatsApp\nlet telefono = (lead.telefono || \"\").toString().replace(/\\D/g, \"\");\nif (telefono.startsWith(\"0\")) {\n  telefono = telefono.substring(1);\n}\nif (!telefono.startsWith(\"58\")) {\n  telefono = \"58\" + telefono;\n}\n\n// Mensaje institucional orientado al aliado B2B\nconst mensaje = `Hola, soy ${name} de Supricom. El equipo de marketing me envió tus datos para darte atención prioritaria. Mi objetivo es asegurar que tu negocio cuente con el respaldo de un mayorista en tecnología que necesitas.`;\nconst whatsappLink = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;\n\n// 5. Retornar el objeto con los mapeos correctos en minúsculas\nreturn [{\n  json: {\n    evento: body.evento || null,\n    vendedor: name,\n    seller_id: parseInt(seller_id) || 0,\n    AsignacionActual: parseInt(asignacion) || 0,\n    WhatsAppLink: whatsappLink,\n    \n    // Mantener la información del vendedor anterior si se requiere en auditorías futuras\n    vendedor_anterior_id: body.vendedor_anterior?.seller_id || null,\n    vendedor_anterior_nombre: body.vendedor_anterior?.nombre || null,\n    \n    // Mapeo del lead en minúsculas\n    nombre_contacto: lead.nombre_contacto || null,\n    empresa: lead.empresa || null,\n    telefono_local: lead.telefono || null,\n    rif: lead.rif || null,\n    ubicacion_estado: lead.ubicacion_estado || null,\n    ubicacion_detail: lead.ubicacion_detalle || null,\n    canal_origen: lead.canal_origen || null,\n    campana: lead.campana || null,\n    status: lead.status || null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "25e291b8-106f-48c9-84a5-13acc45e10ea",
+      "name": "Armar Datos Vendedor Carcar"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=🦁 Nuevo Lead Asignado —  {{ $('Webhook').item.json.body.lead.nombre_contacto }}({{ $('Webhook').item.json.body.lead.ubicacion_estado }})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Carcar').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">Empresa</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json[' Nombre de la empresa'] }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">RIF</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.RIF }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.WhatsApp }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Carcar').item.json.Estado }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">Interés</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.Interes }}</td>\n      </tr>\n    </table>\n    \n    <div style=\"margin:28px 0;text-align:center\">\n      \n      <a href=\"{{ $('Mapear Campos Carcar').item.json.WhatsAppLink }}\"\n         style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;width:80%;max-width:260px;line-height:1.4;word-break:break-word;margin-bottom:12px;box-sizing:border-box\">\n        📲 Abrir WhatsApp con mensaje\n      </a>\n      <br>\n      \n      <a href=\"https://panel.supricom.com.ve/es/vendedores/leads\"\n         style=\"background:#0066CC;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;width:80%;max-width:260px;line-height:1.4;word-break:break-word;box-sizing:border-box\">\n        📊 Ver en Panel de Leads\n      </a>\n    </div>\n    \n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para garantizar una correcta atención comercial y maximizar la conversión de la tienda.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\">\n    <p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p>\n  </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        -48
+      ],
+      "id": "f8e228a3-2ca6-46c3-9deb-fce9ecf7857e",
+      "name": "Email Notificación Carcar",
+      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtener los datos directamente del input\nconst inputData = $input.item.json;\nconst body = inputData.body || {};\nconst lead = body.lead || {}; \n\n// 2. Extraer el objeto del VENDEDOR ANTERIOR de forma segura\nconst vendedorAnterior = body.vendedor_anterior || {};\n\n// Extraer y formatear el nombre del VENDEDOR ANTERIOR (Primera Letra Mayúscula)\nlet nameRaw = vendedorAnterior.nombre || body.vendedor || \"Nuestro Equipo\";\nconst name = nameRaw\n  .toLowerCase()\n  .split(' ')\n  .map(word => word.charAt(0).toUpperCase() + word.slice(1))\n  .join(' ');\n\n// 3. Extraer el seller_id del VENDEDOR ANTERIOR (según la captura es 20)\nconst seller_id = vendedorAnterior.seller_id || lead.seller_id || 0;\nconst asignacion = lead.asignacion || 0; \n\n// 4. Lógica de saneamiento de WhatsApp\nlet telefono = (lead.telefono || \"\").toString().replace(/\\D/g, \"\");\nif (telefono.startsWith(\"0\")) {\n  telefono = telefono.substring(1);\n}\nif (!telefono.startsWith(\"58\")) {\n  telefono = \"58\" + telefono;\n}\n\n// Mensaje institucional orientado al aliado B2B\nconst mensaje = `Hola, soy ${name} de Supricom. El equipo de marketing me envió tus datos para darte atención prioritaria. Mi objetivo es asegurar que tu negocio cuente con el respaldo de un mayorista en tecnología que necesitas.`;\nconst whatsappLink = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;\n\n// 5. Retornar el objeto con los mapeos orientados al vendedor anterior\nreturn [{\n  json: {\n    evento: body.evento || null,\n    vendedor: name,\n    seller_id: parseInt(seller_id) || 0,\n    AsignacionActual: parseInt(asignacion) || 0,\n    WhatsAppLink: whatsappLink,\n    \n    // Trazabilidad invertida: Guardamos los datos del nuevo por si se requieren en el flujo\n    vendedor_nuevo_id: body.vendedor_nuevo?.seller_id || null,\n    vendedor_nuevo_nombre: body.vendedor_nuevo?.nombre || null,\n    \n    // Mapeo del lead en minúsculas\n    nombre_contacto: lead.nombre_contacto || null,\n    empresa: lead.empresa || null,\n    telefono_local: lead.telefono || null,\n    rif: lead.rif || null,\n    ubicacion_estado: lead.ubicacion_estado || null,\n    ubicacion_detail: lead.ubicacion_detalle || null,\n    canal_origen: lead.canal_origen || null,\n    campana: lead.campana || null,\n    status: lead.status || null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        112
+      ],
+      "id": "9bc9037c-77da-49f4-8d50-daa7f6d5dbc2",
+      "name": "Armar Datos Vendedor Carcar1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0eca315e-ae52-474a-a7ce-0d16c78e5d16",
+              "name": "Nombre de Contacto",
+              "value": "={{ $json.nombre_contacto }}",
+              "type": "string"
+            },
+            {
+              "id": "61a06b42-985e-4967-8721-1ffd2dbe3861",
+              "name": " Nombre de la empresa",
+              "value": "={{ $json.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "9c1f72c0-a074-400e-b162-d1a5aefa3765",
+              "name": "RIF",
+              "value": "={{ $json.rif }}",
+              "type": "string"
+            },
+            {
+              "id": "87656849-fcfc-4e62-b705-93b33bf8bfae",
+              "name": "WhatsApp",
+              "value": "={{ $json.telefono_local }}",
+              "type": "string"
+            },
+            {
+              "id": "d6425f3b-a161-4d96-8f0a-3279861628d6",
+              "name": "Ubicacion detalle",
+              "value": "={{ $json.ubicacion_detail }}",
+              "type": "string"
+            },
+            {
+              "id": "af108b89-0a45-46c1-b2ef-70f54e451869",
+              "name": "Estado",
+              "value": "={{ $json.ubicacion_estado }}",
+              "type": "string"
+            },
+            {
+              "id": "859b3238-3f56-4822-8956-9abe63da058d",
+              "name": "Vendedor",
+              "value": "={{ $json.vendedor }}",
+              "type": "string"
+            },
+            {
+              "id": "5f0bbf18-5038-4d87-a129-8f4ef70e2864",
+              "name": "seller_id",
+              "value": "={{ $json.seller_id }}",
+              "type": "number"
+            },
+            {
+              "id": "49127637-430a-4016-b16d-80a1df232158",
+              "name": "WhatsAppLink",
+              "value": "={{ $json.WhatsAppLink }}",
+              "type": "string"
+            },
+            {
+              "id": "39a8c299-305c-40a8-8cee-5cbf46206147",
+              "name": "Canal",
+              "value": "={{ $json.canal_origen }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        112
+      ],
+      "id": "a8e99e29-ced5-4e6b-9fdf-0c481595c66b",
+      "name": "Mapear Campos Carcar1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT uc.email FROM sellers s JOIN users_config uc ON s.user_id = uc.id WHERE s.id = {{ $json.seller_id }} LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        496,
+        112
+      ],
+      "id": "623e288a-9932-4d2c-9f1e-48c8238ed69d",
+      "name": "Obtener Email Vendedor Carcar1",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=⚠️ Lead Retirado por Inactividad — {{ $('Webhook').item.json.body.lead.nombre_contacto }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#333333;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">⚠️ SUPRICOM — Lead Retirado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Armar Datos Vendedor Carcar1').item.json.vendedor }}</strong>,</p>\n    <p style=\"font-size:15px;color:#d9534f;font-weight:bold\">El lead que tenías asignado ha sido retirado de tu cuenta debido a que expiró el tiempo límite de atención sin registrarse actividad comercial.</p>\n    <p style=\"font-size:15px\">Datos del lead retirado:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td>\n        <td style=\"padding:8px 12px\">{{ $('Armar Datos Vendedor Carcar1').item.json.nombre_contacto }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">Empresa</td>\n        <td style=\"padding:8px 12px\">{{ $('Armar Datos Vendedor Carcar1').item.json.empresa }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">RIF</td>\n        <td style=\"padding:8px 12px\">{{ $('Armar Datos Vendedor Carcar1').item.json.rif }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td>\n        <td style=\"padding:8px 12px\">{{ $('Armar Datos Vendedor Carcar1').item.json.ubicacion_detail }} — {{ $('Armar Datos Vendedor Carcar1').item.json.ubicacion_estado }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">Origen</td>\n        <td style=\"padding:8px 12px\">{{ $('Armar Datos Vendedor Carcar1').item.json.canal_origen }}</td>\n      </tr>\n    </table>\n    \n    <div style=\"margin:28px 0;text-align:center\">\n      <!-- Único Botón: Ir al Panel de Gestión -->\n      <a href=\"https://panel.supricom.com.ve/es/vendedores/leads\"\n         style=\"background:#0066CC;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;width:80%;max-width:260px;line-height:1.4;word-break:break-word;box-sizing:border-box\">\n        📊 Revisar Panel de Leads\n      </a>\n    </div>\n    \n    <p style=\"font-size:13px;color:#888\">Para SUPRICOM, la velocidad de respuesta es crítica para garantizar el portafolio y resguardar la rotación de nuestros aliados comerciales. Procura atender tus próximas asignaciones a tiempo para evitar la reasignación automática.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\">\n    <p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p>\n  </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        112
+      ],
+      "id": "33a758b8-0460-479b-8e42-75c22c85b0cf",
+      "name": "Email Notificación Retiro Carcar",
+      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Obtener Email Vendedor Carcar": {
+      "main": [
+        [
+          {
+            "node": "Email Notificación Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Carcar": {
+      "main": [
+        [
+          {
+            "node": "Obtener Email Vendedor Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Datos Vendedor Carcar": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Armar Datos Vendedor Carcar",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Armar Datos Vendedor Carcar1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Datos Vendedor Carcar1": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Carcar1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Carcar1": {
+      "main": [
+        [
+          {
+            "node": "Obtener Email Vendedor Carcar1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Email Vendedor Carcar1": {
+      "main": [
+        [
+          {
+            "node": "Email Notificación Retiro Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "a3e017a4-f967-4e25-8a92-fec7c6817816",
+  "meta": {
+    "instanceId": "1683493ca79f362f0cdd6311bf11f1609621e8cd207e078485d8ca15ccb3975a"
+  },
+  "id": "oWh3u4TgKQUEsT4a",
+  "tags": []
+}

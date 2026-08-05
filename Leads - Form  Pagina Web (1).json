@@ -1,0 +1,728 @@
+{
+  "name": "Leads - Form  Pagina Web",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "form",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -736,
+        32
+      ],
+      "id": "1f12b58e-64c1-490b-bc7d-df57400904d7",
+      "name": "Webhook Formulario Web",
+      "webhookId": "0f70472d-65d9-45f2-b61b-14acc701483a"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2f063c96-b82e-4972-ad35-227d19781def",
+              "leftValue": "={{ $json.al_mayor }}",
+              "rightValue": "Si",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -304,
+        32
+      ],
+      "id": "16601964-2fde-4f83-88fd-afe153b27f8e",
+      "name": "¿Es Compra al Mayor?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Como el nodo MySQL ya devuelve al vendedor ganador, tomamos ese item\n// 1. Como el nodo MySQL ya devuelve al vendedor ganador, tomamos ese item\nconst vendedor = items[0].json;\n\n// 2. Recuperar datos del Lead original\nconst leadData = $('¿Es Caracas / Carabobo?').item.json; \n\n// 3. L├│gica de WhatsApp\nlet telefono = (leadData.WhatsApp || \"\").toString().replace(/\\D/g, \"\");\nif (telefono.startsWith(\"0\")) {\n  telefono = telefono.substring(1);\n}\nif (!telefono.startsWith(\"58\")) {\n  telefono = \"58\" + telefono;\n}\n\n// Definir mensaje din├ímico con el nombre del vendedor obtenido de MySQL\n// CORRECCI├ôN: Se cambi├│ vendedor.nombre a vendedor.name\nconst nombreVendedor = vendedor.name || \"nuestro equipo\";\nconst mensaje = `Hola, soy ${nombreVendedor} de Supricom. El equipo de marketing me envi├│ tus datos para darte atenci├│n prioritaria. Mi objetivo es asegurar que tu negocio cuente con el respaldo de un mayorista en tecnolog├¡a que necesitas.`;\n\n// Generar el link\nconst whatsappLink = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;\n\n// 4. Retornar el objeto combinado\nreturn [{\n  json: {\n    ...leadData,\n    Vendedor: vendedor.name,\n    seller_id: vendedor.seller_id, // Usamos el ID de la tabla para el siguiente nodo\n    AsignacionActual: parseInt(vendedor.asignacion) || 0,\n    WhatsAppLink: whatsappLink\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -96
+      ],
+      "id": "06f4a5b1-e3c7-484f-9d7c-8ee27657e2b5",
+      "name": "Armar Datos Vendedor Carcar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtener datos del lead y el vendedor (la fuente depende de la rama)\nconst leadData = $('¿Es Caracas / Carabobo?').item.json;\n// El nodo MySQL previo nos devuelve al vendedor ganador en items[0]\nconst vendedor = items[0].json;\n\n// 2. Limpiar el n├║mero de tel├®fono\nlet telefono = (leadData.WhatsApp || \"\").toString().replace(/\\D/g, \"\");\nif (telefono.startsWith(\"0\")) {\n  telefono = telefono.substring(1);\n}\nif (!telefono.startsWith(\"58\")) {\n  telefono = \"58\" + telefono;\n}\n\n// 3. Definir mensaje din├ímico\nconst nombreVendedor = vendedor.Vendedor || \"nuestro equipo\";\n// CORRECCI├ôN AQU├ì: Usamos ${leadData['Nombre de Contacto']} para inyectar el nombre real\nconst mensaje = `Hola ${leadData['Nombre de Contacto']}, soy ${nombreVendedor} de Supricom. El equipo de marketing me envi├│ tus datos para darte atenci├│n prioritaria. Mi objetivo es asegurar que tu negocio cuente con el respaldo de un mayorista en tecnolog├¡a que necesitas.`;\n\n// 4. Generar el link\nconst whatsappLink = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;\n\n// 5. Preparar objeto de retorno incluyendo el seller_id y el canal\nlet jsonRetorno = {\n    ...leadData,\n    Vendedor: vendedor.Vendedor,\n    seller_id: vendedor.seller_id,\n    WhatsAppLink: whatsappLink,\n    Canal: leadData.Canal || \"No definido\" // <--- Aqu├¡ capturamos el canal del lead\n};\n\nreturn [{\n  json: jsonRetorno\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        112
+      ],
+      "id": "2e9a03f3-d077-4769-a2dc-ed2915f9421f",
+      "name": "Armar Datos Vendedor Otros"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0eca315e-ae52-474a-a7ce-0d16c78e5d16",
+              "name": "Nombre de Contacto",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json['Nombre de Contacto'] }}",
+              "type": "string"
+            },
+            {
+              "id": "61a06b42-985e-4967-8721-1ffd2dbe3861",
+              "name": " Nombre de la empresa",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json['Nombre de la empresa'] }}",
+              "type": "string"
+            },
+            {
+              "id": "9c1f72c0-a074-400e-b162-d1a5aefa3765",
+              "name": "RIF",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.RIF }}",
+              "type": "string"
+            },
+            {
+              "id": "87656849-fcfc-4e62-b705-93b33bf8bfae",
+              "name": "WhatsApp",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.WhatsApp }}",
+              "type": "number"
+            },
+            {
+              "id": "d6425f3b-a161-4d96-8f0a-3279861628d6",
+              "name": "Ubicacion detalle",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json['Ubicacion detalle'] }}",
+              "type": "string"
+            },
+            {
+              "id": "af108b89-0a45-46c1-b2ef-70f54e451869",
+              "name": "Estado",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.Estado }}",
+              "type": "string"
+            },
+            {
+              "id": "18170bce-e867-401e-9b63-853a08e5a243",
+              "name": "Interes",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.Interes }}",
+              "type": "string"
+            },
+            {
+              "id": "859b3238-3f56-4822-8956-9abe63da058d",
+              "name": "Vendedor",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.Vendedor }}",
+              "type": "string"
+            },
+            {
+              "id": "5f0bbf18-5038-4d87-a129-8f4ef70e2864",
+              "name": "seller_id",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.seller_id }}",
+              "type": "number"
+            },
+            {
+              "id": "49127637-430a-4016-b16d-80a1df232158",
+              "name": "WhatsAppLink",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.WhatsAppLink }}",
+              "type": "string"
+            },
+            {
+              "id": "39a8c299-305c-40a8-8cee-5cbf46206147",
+              "name": "Canal",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.Canal }}",
+              "type": "string"
+            },
+            {
+              "id": "8672a782-4140-4bcb-a722-62fdd5619873",
+              "name": "Tipo",
+              "value": "={{ $('Armar Datos Vendedor Carcar').item.json.Tipo }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        -96
+      ],
+      "id": "0ce78e55-1769-4d5c-85dd-ae1334c79661",
+      "name": "Mapear Campos Carcar"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f28d731-c150-45f1-8694-6fec7bf49341",
+              "name": "Nombre de Contacto",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json['Nombre de Contacto'] }}",
+              "type": "string"
+            },
+            {
+              "id": "bdf3ba0b-b132-4d97-9a8b-d57ff344ebe9",
+              "name": "Nombre de la empresa",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json['Nombre de la empresa'] }}",
+              "type": "string"
+            },
+            {
+              "id": "181a07b3-d890-46b9-be10-5aee11cb253d",
+              "name": "RIF",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.RIF }}",
+              "type": "string"
+            },
+            {
+              "id": "81d9543d-bd78-4d81-82bc-d35cb11d6a13",
+              "name": "WhatsApp",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.WhatsApp }}",
+              "type": "string"
+            },
+            {
+              "id": "3e4beddc-2997-4e30-bbfb-4dc265cf41b7",
+              "name": "Ubicacion detalle",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json['Ubicacion detalle'] }}",
+              "type": "string"
+            },
+            {
+              "id": "7e6a6372-0034-466f-b70c-19de43595fa6",
+              "name": "Estado",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.Estado }}",
+              "type": "string"
+            },
+            {
+              "id": "ae0e9664-9c44-466f-b8d6-ef33fdd5d521",
+              "name": "Interes",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.Interes }}",
+              "type": "string"
+            },
+            {
+              "id": "a58bd3a3-1926-4be9-8958-dbd1b6c4e3d7",
+              "name": "Vendedor",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.Vendedor }}",
+              "type": "string"
+            },
+            {
+              "id": "5b798f7e-17fd-49ce-9186-4b1719950957",
+              "name": "seller_id",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.seller_id }}",
+              "type": "number"
+            },
+            {
+              "id": "aa7023ae-e1b5-4cee-8847-fd3dc5931564",
+              "name": "WhatsAppLink",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.WhatsAppLink }}",
+              "type": "string"
+            },
+            {
+              "id": "7086091b-79f8-45fc-93fe-80ba6b6c13b2",
+              "name": "Fase de Oportunidad",
+              "value": "NUEVO",
+              "type": "string"
+            },
+            {
+              "id": "00bbbf48-355d-49f2-9dc4-254f378ff424",
+              "name": "Canal",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.Canal }}",
+              "type": "string"
+            },
+            {
+              "id": "d5ca22a8-8883-4333-851a-a27d28c5131e",
+              "name": "Tipo",
+              "value": "={{ $('Armar Datos Vendedor Otros').item.json.Tipo }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        112
+      ],
+      "id": "be2988df-0c88-4127-93ed-0b160b0d9820",
+      "name": "Mapear Campos Otros"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CALL asignar_vendedor_rotacion_carcar('{{ $json.Estado }}')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        144,
+        -96
+      ],
+      "id": "81450e3a-c1bb-448a-b37e-11690258efee",
+      "name": "Asignar Vendedor Carcar",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (\n    fecha_ingreso, nombre_contacto, name, rif, telefono, \n      ubicacion_detalle, ubicacion_estado, seller_id, \n    whatsapp_link, status, canal_origen, interes, identidad\n) VALUES (\n   NOW(), \n    '{{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }}', \n    '{{ $('Mapear Campos Carcar').item.json[' Nombre de la empresa'] }}',\n    '{{ $('Mapear Campos Carcar').item.json.RIF }}', \n    '{{ $('Mapear Campos Carcar').item.json.WhatsApp }}', \n    '{{ $('Mapear Campos Carcar').item.json['Ubicacion detalle'] }}', \n    '{{ $('Mapear Campos Carcar').item.json.Estado }}', \n     {{ $('Mapear Campos Carcar').item.json.seller_id }}, \n    '{{ $('Mapear Campos Carcar').item.json.WhatsAppLink }}', \n    'NUEVO',\n    '{{ $('Mapear Campos Carcar').item.json.Canal }}',\n    '{{ $('Mapear Campos Carcar').item.json.Interes }}',\n    '{{ $('Mapear Campos Carcar').item.json.Tipo }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1136,
+        -96
+      ],
+      "id": "ed9cb6e0-3351-40d8-9bf5-7eeee012d4d6",
+      "name": "Registrar Lead Carcar en BD",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CALL asignar_vendedor_rotacion('{{ $json.Estado }}')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        144,
+        112
+      ],
+      "id": "f929fc02-3a27-4adb-86dd-2fd7a9651410",
+      "name": "Asignar Vendedor Otros Estados",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (\n    fecha_ingreso, nombre_contacto, name, rif, telefono, \n    ubicacion_detalle, ubicacion_estado, seller_id, \n    whatsapp_link, status, canal_origen, interes, identidad\n) VALUES (\n    NOW(), \n    '{{ $('Mapear Campos Otros').item.json['Nombre de Contacto'] }}', \n    '{{ $('Mapear Campos Otros').item.json['Nombre de la empresa'] }}',\n    '{{ $('Mapear Campos Otros').item.json.RIF }}', \n    '{{ $('Mapear Campos Otros').item.json.WhatsApp }}', \n    '{{ $('Mapear Campos Otros').item.json['Ubicacion detalle'] }}', \n    '{{ $('Mapear Campos Otros').item.json.Estado }}', \n     {{ $('Mapear Campos Otros').item.json.seller_id }}, \n    '{{ $('Mapear Campos Otros').item.json.WhatsAppLink }}', \n    'NUEVO',\n    '{{ $('Mapear Campos Otros').item.json.Canal }}',\n    '{{ $('Mapear Campos Otros').item.json.Interes }}',\n    '{{ $('Mapear Campos Otros').item.json.Tipo }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1136,
+        112
+      ],
+      "id": "0a01458d-eaaa-4ca2-a359-888fa4d8c9d3",
+      "name": "Registrar Lead Otros en BD",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Obtener Email Vendedor Carcar').item.json.email }}",
+        "subject": "=🦁 Nuevo Lead Asignado — {{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }} ({{ $('Mapear Campos Carcar').item.json['Estado'] }})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Carcar').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Nombre de Contacto'] }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">Empresa</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json[' Nombre de la empresa'] }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">RIF</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.RIF }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.WhatsApp }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Carcar').item.json.Estado }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">Interés</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Carcar').item.json.Interes }}</td>\n      </tr>\n    </table>\n    <div style=\"margin:24px 0;text-align:center\">\n      <a href=\"{{ $('Mapear Campos Carcar').item.json.WhatsAppLink }}\"\n         style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;max-width:80%;line-height:1.4;word-break:break-word\">\n        📲 Abrir WhatsApp con mensaje listo\n      </a>\n    </div>\n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para maximizar las posibilidades de cierre.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\">\n    <p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p>\n  </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        -96
+      ],
+      "id": "00aa9b9d-2a0d-4f70-8d8f-a356e8972c80",
+      "name": "Email Notificación Carcar",
+      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT uc.email FROM sellers s JOIN users_config uc ON s.user_id = uc.id WHERE s.id = {{ $('Mapear Campos Otros').item.json.seller_id }} LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        944,
+        112
+      ],
+      "id": "6e605fc1-1ff5-414d-8352-18da1576f6ad",
+      "name": "Obtener Email Vendedor Otros",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT uc.email FROM sellers s JOIN users_config uc ON s.user_id = uc.id WHERE s.id = {{ $('Mapear Campos Carcar').item.json.seller_id }} LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        944,
+        -96
+      ],
+      "id": "69e9104d-259b-4b6b-be50-b1769dc21eff",
+      "name": "Obtener Email Vendedor Carcar",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Obtener Email Vendedor Otros').item.json.email }}",
+        "subject": "=🦁 Nuevo Lead Asignado — {{ $('Mapear Campos Otros').item.json['Nombre de Contacto'] }} ({{ $('Mapear Campos Otros').item.json['Estado'] }})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden\">\n  <div style=\"background:#0066CC;padding:20px 24px\">\n    <h2 style=\"color:#ffffff;margin:0\">🦁 SUPRICOM — Nuevo Lead Asignado</h2>\n  </div>\n  <div style=\"padding:24px\">\n    <p style=\"font-size:15px\">Hola <strong>{{ $('Mapear Campos Otros').item.json.Vendedor }}</strong>,</p>\n    <p style=\"font-size:15px\">Se te ha asignado un nuevo lead. Aquí están los datos:</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:16px 0\">\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold;width:40%\">Contacto</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Nombre de Contacto'] }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">Empresa</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Nombre de la empresa'] }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">RIF</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.RIF }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">WhatsApp</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.WhatsApp }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">Ubicación</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json['Ubicacion detalle'] }} — {{ $('Mapear Campos Otros').item.json.Estado }}</td>\n      </tr>\n      <tr style=\"background:#f5f5f5\">\n        <td style=\"padding:8px 12px;font-weight:bold\">Interés</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.Interes }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 12px;font-weight:bold\">Tipo</td>\n        <td style=\"padding:8px 12px\">{{ $('Mapear Campos Otros').item.json.Tipo }}</td>\n      </tr>\n    </table>\n    <div style=\"margin:24px 0;text-align:center\">\n      <a href=\"{{ $('Mapear Campos Otros').item.json.WhatsAppLink }}\"\n         style=\"background:#25D366;color:#ffffff;padding:14px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;max-width:80%;line-height:1.4;word-break:break-word\">\n        📲 Abrir WhatsApp con mensaje listo\n      </a>\n    </div>\n    <p style=\"font-size:13px;color:#888\">Recuerda contactar al lead en las próximas horas para maximizar las posibilidades de cierre.</p>\n  </div>\n  <div style=\"background:#f0f0f0;padding:12px 24px;text-align:center\">\n    <p style=\"font-size:12px;color:#aaa;margin:0\">SUPRICOM. Tu mayorista de confianza. 🦁</p>\n  </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        112
+      ],
+      "id": "9a895c2f-f14f-4770-af00-82343ad82f57",
+      "name": "Email Notificación Otros",
+      "webhookId": "967a2225-2ddd-495a-8aa7-7cd37ca65d17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "32468143-84f8-4517-b1f0-7514e20a9941",
+              "leftValue": "={{ $json.Estado }}",
+              "rightValue": "Carabobo",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "159ca313-4775-47e0-9a07-12100fece0f3",
+              "leftValue": "={{ $json.Estado }}",
+              "rightValue": "Caracas",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "a4f7b681-653b-4548-88b8-82cf1e7497ac",
+              "leftValue": "={{ $json.Estado }}",
+              "rightValue": "Distrito Capital",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -64,
+        16
+      ],
+      "id": "2b903a1d-968b-4612-a603-75676c67d22f",
+      "name": "¿Es Caracas / Carabobo?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5064d873-7829-415a-94ed-b3220255c5f7",
+              "name": "al_mayor",
+              "value": "={{ $json.body.respuestas['¿Realizas compras al mayor para una tienda o empresa?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e52b27a5-af6d-4b97-82e6-b8beec307178",
+              "name": "Nombre",
+              "value": "={{ $json.body.respuestas.Nombre }} {{ $json.body.respuestas.Apellido }}",
+              "type": "string"
+            },
+            {
+              "id": "dc598edf-45e9-4931-82e9-4097acaab76e",
+              "name": "WhatsApp",
+              "value": "={{ $json.body.respuestas['Teléfono'] }}",
+              "type": "string"
+            },
+            {
+              "id": "0389ce23-f6ed-47e9-a8a7-6e0ea379f509",
+              "name": "Correo Electrónico",
+              "value": "={{ $json.body.respuestas['Correo Electrónico'] }}",
+              "type": "string"
+            },
+            {
+              "id": "81fb12c5-907e-40bc-9442-f834176a3439",
+              "name": "Empresa",
+              "value": "={{ $json.body.respuestas['Nombre de la Empresa'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f780577d-f650-4684-ade5-cc95aaac0a1a",
+              "name": "RIF",
+              "value": "={{ $json.body.respuestas['RIF (Registro de información fiscal)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e9ebb7ff-7490-4b97-a59d-d3e48a682619",
+              "name": "Ubicacion",
+              "value": "={{ $json.body.respuestas['Dirección'] }}",
+              "type": "string"
+            },
+            {
+              "id": "324f8cf7-964a-4e74-91ae-d2dfe047111a",
+              "name": "Estado",
+              "value": "={{ $json.body.respuestas.Estado }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -496,
+        32
+      ],
+      "id": "6f8adfa1-6368-49a6-8c43-cf79b6472dea",
+      "name": "Mapear Datos del Formulario"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Formulario Web": {
+      "main": [
+        [
+          {
+            "node": "Mapear Datos del Formulario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Datos Vendedor Carcar": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Datos Vendedor Otros": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Otros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Carcar": {
+      "main": [
+        [
+          {
+            "node": "Obtener Email Vendedor Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Otros": {
+      "main": [
+        [
+          {
+            "node": "Obtener Email Vendedor Otros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asignar Vendedor Carcar": {
+      "main": [
+        [
+          {
+            "node": "Armar Datos Vendedor Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Lead Carcar en BD": {
+      "main": [
+        [
+          {
+            "node": "Email Notificación Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asignar Vendedor Otros Estados": {
+      "main": [
+        [
+          {
+            "node": "Armar Datos Vendedor Otros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Lead Otros en BD": {
+      "main": [
+        [
+          {
+            "node": "Email Notificación Otros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Email Vendedor Otros": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead Otros en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Email Vendedor Carcar": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead Carcar en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Caracas / Carabobo?": {
+      "main": [
+        [
+          {
+            "node": "Asignar Vendedor Carcar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Asignar Vendedor Otros Estados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Compra al Mayor?": {
+      "main": [
+        [
+          {
+            "node": "¿Es Caracas / Carabobo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Datos del Formulario": {
+      "main": [
+        [
+          {
+            "node": "¿Es Compra al Mayor?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fb13d2db-77af-409d-89da-ef766c80cbd8",
+  "meta": {
+    "instanceId": "1683493ca79f362f0cdd6311bf11f1609621e8cd207e078485d8ca15ccb3975a"
+  },
+  "id": "EdxyMeyKruJkUcor",
+  "tags": []
+}

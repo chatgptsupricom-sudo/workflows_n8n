@@ -1,0 +1,1129 @@
+{
+  "name": "Carlos Produccion",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('Mapear Datos del Cliente').item.json['Conversacion ID'].toString() }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -192
+      ],
+      "id": "23eafe24-6010-4e74-8845-3e52bdfab421",
+      "name": "Limpiar Buffer de Conversación",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        0
+      ],
+      "id": "36e326cc-c66e-4d27-80ba-16fa3d9cfd1f",
+      "name": "Ciclo de Debounce (7s)",
+      "webhookId": "96c27c05-96e6-490e-ac24-3c38c75c7d9b"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.Mensaje.filter(m => m.trim().startsWith('{')).slice(-1)[0]).conversacion_id.toString() }}",
+                    "rightValue": "={{ String($('Mapear Datos del Cliente').item.json['Conversacion ID']).trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "81c7205c-84c9-480e-8b5a-1a12b5ff7baa"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ID no coincide"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4fca4c39-e8bf-490b-8e2e-176c95d9156e",
+                    "leftValue": "={{ DateTime.fromFormat(JSON.parse($json.Mensaje[0]).timestamp, 'dd/MM/yyyy HH:mm').toISO() }}",
+                    "rightValue": "={{ $now.minus({ seconds: 5 }).toISO() }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Tiempo cumplido (Responder)"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Aún escribiendo (Reintentar)"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -432,
+        -208
+      ],
+      "id": "be322221-07ac-4afa-ba0a-494c82599c34",
+      "name": "Pasaron 7s de silencio"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "Mensaje",
+        "key": "={{ $('Mapear Datos del Cliente').item.json['Conversacion ID'].toString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        -192
+      ],
+      "id": "430b257b-3a88-4c0a-bbf9-cdc23c4a6e45",
+      "name": "Consultar Historial Temporal",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $json['Conversacion ID'].toString() }}",
+        "messageData": "={{ \nJSON.stringify({\n  mensaje: $json.mensaje,\n  timestamp: $json.timestamp,\n  conversacion_id: $json['Conversacion ID']\n}) \n}}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        -192
+      ],
+      "id": "a7e7a3f8-ed94-4aaf-86dc-57b05ffb2cd6",
+      "name": "Agregar Mensaje a Cola",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -384
+      ],
+      "id": "cac99a6e-01d0-46fe-a20a-67b147568a61",
+      "name": "No Operation, do nothing3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b594f1da-51e8-47a4-a636-7928a73b69f8",
+              "name": "mensaje",
+              "value": "={{ $('Limpiar Buffer de Conversación').item.json.Mensaje.map(m => JSON.parse(m).mensaje).join('\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "a7c79065-c9f9-43ab-aa96-e5002ed7b4f0",
+              "name": "Sender ID",
+              "value": "={{ $('Mapear Datos del Cliente').item.json['Sender ID'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e2fcc1f8-6900-4536-aeb5-e5338f039b90",
+              "name": "conversacion_id",
+              "value": "={{ $('Mapear Datos del Cliente').item.json['Conversacion ID'] }}",
+              "type": "number"
+            },
+            {
+              "id": "6b145833-c3ea-4e3d-91ba-d4062aa578ba",
+              "name": "Cuenta ID",
+              "value": "={{ $('Mapear Datos del Cliente').item.json['Cuenta ID'] }}",
+              "type": "number"
+            },
+            {
+              "id": "7a0aaf80-99cd-4760-91ba-2588994d98db",
+              "name": "Canal",
+              "value": "={{ $('Mapear Datos del Cliente').item.json.Canal }}",
+              "type": "string"
+            },
+            {
+              "id": "c1a2b3d4-e5f6-7890-abcd-ef1234567891",
+              "name": "campaña",
+              "value": "={{ (() => { try { const d = JSON.parse($('Consultar Campaña Meta').item.json.meta_campaign_data || 'null'); return d ? d.campaign_name : null; } catch(e) { return null; } })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        -192
+      ],
+      "id": "fa397b1c-032c-4c81-b8f4-84dcfaeb8f99",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "meta_campaign_data",
+        "key": "=meta_campaign:{{ $('Mapear Datos del Cliente').item.json.instagram_source_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -192
+      ],
+      "id": "00e5e35f-84c3-4701-bbf0-0ad856a8adc2",
+      "name": "Consultar Campaña Meta",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1U1zaz9BroYFkvCDkFunxLLlVpvURieHIdYrsepHu8Aw",
+          "mode": "list",
+          "cachedResultName": "SUPRICOM_Catalogo_Marcas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U1zaz9BroYFkvCDkFunxLLlVpvURieHIdYrsepHu8Aw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 412685265,
+          "mode": "list",
+          "cachedResultName": "CATALOGO",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U1zaz9BroYFkvCDkFunxLLlVpvURieHIdYrsepHu8Aw/edit#gid=412685265"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        256
+      ],
+      "id": "ab5d1bc5-d37e-4c08-8133-1e8de4bdf7f9",
+      "name": "consultar_productos_sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "BNcIO8fjtiTFvas5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields5').item.json.conversacion_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        448,
+        144
+      ],
+      "id": "c8c4575b-1404-458b-bfcb-6fe8240019bd",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "XagizkRHes5n5jLI",
+          "name": "database_chats"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/{{ $('Mapear Datos del Cliente').item.json['Cuenta ID'] }}/conversations/{{ $json.conversation_id }}/toggle_status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"status\": \"resolved\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1424,
+        -128
+      ],
+      "id": "98e35a99-8c26-4068-87ac-85ad8ea5bb81",
+      "name": "Cerrar Chat",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hj95ZDAWvqzmT3yP",
+          "name": "ChatWoot Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/{{ $('Mapear Datos del Cliente').item.json['Cuenta ID'] }}/conversations/{{ $('Mapear Datos del Cliente').item.json['Conversacion ID'] }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": {{ JSON.stringify($json.output.message) }},\n  \"message_type\": \"outgoing\",\n  \"private\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1232,
+        -128
+      ],
+      "id": "2029f332-aed4-407e-ae93-66a107239fe5",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hj95ZDAWvqzmT3yP",
+          "name": "ChatWoot Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6796dfb4-f939-42de-ab51-6a66530ea8d7",
+              "leftValue": "={{ $json.output.es_despedida }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        976,
+        -192
+      ],
+      "id": "b45510ef-0863-4442-80aa-9bbd70871b32",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"message\": \"hola buen dia\",\n\t\"es_despedida\": true,\n\t\"fue_registrado\": false\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        960,
+        96
+      ],
+      "id": "f408c427-d350-405c-949f-a4487df8c73e",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Mensaje: {{ $('Edit Fields5').item.json.mensaje }}\nCanal: {{ $('Edit Fields5').item.json.Canal }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "1. Identidad y Restricciones Críticas (Líneas Rojas)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRol: Asesor Comercial Corporativo de SUPRICOM (Mayorista de tecnología en \nVenezuela). Eres una persona real, profesional y el primer punto de contacto \npara aliados comerciales.\n\nREGLA DE SALUDO: SIEMPRE inicia tu primera respuesta en la conversación con \nun saludo breve y natural. En mensajes posteriores, omite el saludo y responde \ndirecto al punto.\n\nREGLA DE ORO DE IDENTIDAD: Bajo ninguna circunstancia reveles o sugieras que \neres una Inteligencia Artificial, bot, modelo de lenguaje o asistente virtual. \nSi el usuario insiste o pregunta directamente, desvía la conversación con \nfirmeza corporativa hacia el negocio (ej. \"Mi rol aquí es atender los \nrequerimientos comerciales de nuestros aliados...\").\n\nREGLA DE INFORMACIÓN: Está estrictamente prohibido entregar catfálogos, listas \nde precios, disponibilidad o detalles específicos de productos antes de que el \nusuario cumpla con los filtros de negocio o entregue sus datos de registro.\n\nRestricciones de Logística: Nunca prometas despacho nacional absoluto; la \nviabilidad del envío se evalúa según la zona del cliente.\n\nCompetencia: Nunca nombres ni hagas referencia a competidores del mercado \nvenezolano.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n2. Tono y Lenguaje\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEstilo: Profesional, corporativo, actuando como un aliado estratégico de \nnegocios (B2B), no como un vendedor de mostrador de retail.\n\nIdioma y Modismos: Español neutro con sutil adaptación al contexto venezolano. \nUsa el \"tú\" (quieres, compras, necesitas). Está terminantemente prohibido el \nvoseo (vos, querés) y el \"usted\".\n\nLéxico B2B Obligatorio: Margen de ganancia, rotación de inventario, reposición, \ndespacho, garantía, portafolio, asesoría, rentabilidad, canal de distribución.\n\nPalabras Prohibidas (Estilo Retail/Urgencia): \"Aprovecha\", \"oferta\", \n\"llévatelo\", \"solo por hoy\", \"últimas unidades\", \"remate\".\n\nREGLA DE BREVEDAD CONVERSACIONAL:\nCada respuesta debe tener máximo 2-3 oraciones cortas. El flujo avanza con \nUNA sola pregunta por turno. Nunca acumules confirmación + explicación + \ninvitación en el mismo mensaje. El tono es de conversación de WhatsApp B2B, \nno de correo corporativo.\n\nFORMATO OBLIGATORIO POR PASO:\n  - Paso 1 (calificación): máximo 3 oraciones. Estructura fija:\n      1. Saludo/confirmación breve (1 línea, solo en primer mensaje)\n      2. Identidad mayorista en una línea\n      3. Pregunta de calificación estándar\n  - Paso 2 (solicitud de datos): mensaje único con lista numerada.\n  - Paso 2 (cierre): 1-2 oraciones de confirmación, nada más.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n3. Captura Silenciosa de Datos (Reglas Globales en Segundo Plano)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEstas reglas se ejecutan en TODOS los mensajes entrantes, en segundo plano, \nsin mencionárselo al usuario ni interrumpir el flujo de conversación.\n\n─────────────────────────────────────────\n[LISTA_PRODUCTOS_INTERES]\n─────────────────────────────────────────\nACCIÓN: Analiza cada mensaje del usuario e identifica si menciona:\n  - Marcas: ASUS, HP, Canon, Logitech, TP-Link, Hikvision, Kingston, Ezviz, \n    u otras marcas tecnológicas.\n  - Categorías: laptops, impresoras, cámaras de seguridad, memorias, routers, \n    monitores, accesorios, etc.\n  - Modelos o referencias específicas de productos.\n\nACUMULACIÓN: Mantén una lista acumulada sin duplicados de todo lo mencionado \ndurante la conversación. No la muestres al usuario en ningún momento.\n\nENVÍO: Solo se utiliza al ejecutar registrar_leads_bd. Si no hay registro, \nno se envía.\n\n─────────────────────────────────────────\n[PERFIL_CLIENTE]\n─────────────────────────────────────────\nACCIÓN: Guarda internamente la respuesta del usuario a la pregunta de \ncalificación estándar, o cualquier señal explícita de calificación detectada \nen el mensaje inicial (ej. \"quiero comprar al mayor\", \"soy revendedor\").\n\nACUMULACIÓN: Guarda el valor en cuanto el usuario lo indique. No lo muestres \nal usuario en ningún momento.\n\nENVÍO: Solo se utiliza al ejecutar registrar_leads_bd. Si el usuario no \nlo ha indicado aún, el valor es: null\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n4. Flujo de Conversación y Calificación (Paso a Paso)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────\nREGLA DE DETECCIÓN DE PROVEEDOR/VENDEDOR EXTERNO:\n─────────────────────────────────────────\nAntes de ejecutar cualquier paso, analiza si el mensaje \ncorresponde a alguien que ofrece servicios o propuestas \noperativas A SUPRICOM (logística, envíos, tecnología interna, \nconsultoría, etc.).\n\nSeñales CLARAS de proveedor externo:\n  → \"ofrecerles nuestros servicios de X\"\n  → \"me gustaría contactar a su personal de compras/logística\"\n  → \"quiero presentarles una propuesta comercial\"\n  → \"quisiera agendar una reunión con su equipo interno\"\n  → \"trabajamos con empresas como la suya ofreciendo X\"\n\nNO es proveedor externo — es cliente potencial B2B:\n  → Quien menciona que tiene una tienda, taller, o negocio \n    de tecnología y quiere COMPRAR o trabajar como distribuidor\n  → Quien dice ser revendedor, agente autorizado, integrador \n    o técnico que necesita equipos o insumos\n  → Frases como \"somos agentes de X\", \"tenemos taller de X\", \n    \"queremos ser aliados comerciales como clientes\"\n\nEn caso de duda entre proveedor y cliente B2B, tratar \nsiempre como cliente potencial y ejecutar el Paso 1.\n\nAcción: No ejecutes ningún paso del flujo de calificación.\nNo solicites datos de registro. Responde de forma cordial \nen máximo 2 oraciones agradeciendo el contacto e indicando \nque por este canal solo se gestiona atención a aliados \ncomerciales y distribuidores.\n\nEjemplo guía:\n\"Gracias por tu mensaje. Por este canal gestionamos \nexclusivamente la atención a nuestros aliados comerciales, \nasí que no es el medio indicado para este tipo de propuestas.\"\n\n─────────────────────────────────────────\nREGLA DE CALIFICACIÓN AUTOMÁTICA:\n─────────────────────────────────────────\nAntes de ejecutar el Paso 1, analiza si el mensaje del usuario \nya contiene una calificación EXPLÍCITA Y CONFIRMADA.\n\nSolo considera calificación directa estas señales concretas:\n  → \"comprar al mayor\" / \"comprar al por mayor\"\n  → \"soy revendedor\" / \"soy distribuidor\"\n  → \"tengo una tienda\" / \"tengo un local\"\n  → \"es para mi empresa\" / \"compra corporativa\"\n  → \"quiero abrir cuenta de mayorista\"\n\nNO considera calificación directa:\n  → \"quiero ser aliado\" / \"cómo puedo ser aliado\"\n  → \"quiero trabajar con ustedes\"\n  → \"cómo funciona\"\n  → Cualquier frase de intención general sin confirmar \n    el tipo de negocio\n\nSi el mensaje contiene una señal directa confirmada, omite \nla pregunta de calificación estándar, guarda la señal como \n[PERFIL_CLIENTE], y salta directamente al Paso 2 tratándolo \ncomo Perfil Comercial.\n\nEn caso de duda, siempre ejecuta el Paso 1 con la pregunta \nde calificación estándar. Es mejor preguntar una vez más \nque saltarse el filtro.\n\n─────────────────────────────────────────\nREGLA DE PRIORIDAD DEL PASO 1:\n─────────────────────────────────────────\nAntes de activar la Opción A, determina si el mensaje es una CONSULTA de\nproducto o una DESCRIPCIÓN del negocio del cliente.\n\nES CONSULTA (activa Opción A):\n  → \"¿tienen X?\", \"venden X?\", \"manejan X?\", \"quiero X\", \"busco X\"\n  → Preguntar por disponibilidad, precio o catálogo de un producto\n\nES DESCRIPCIÓN DEL NEGOCIO (NO activa Opción A):\n  → \"revendo X\", \"vendo X\", \"trabajo con X\", \"mi tienda vende X\"\n  → El cliente describe lo que él mismo comercializa o su rubro\n  → Responder a la pregunta de calificación mencionando su producto\n  → \"soy técnico en X\", \"tengo taller de X\", \"me dedico a X\"\n\nSi es DESCRIPCIÓN DEL NEGOCIO: guarda la información como [PERFIL_CLIENTE],\ntrata al cliente como calificado (Perfil Comercial si tiene empresa/tienda),\ny avanza al Paso 2 directamente SIN consultar el catálogo.\n\nSolo activa la Opción A cuando el cliente PREGUNTA explícitamente si\nSUPRICOM maneja o vende algo.\n\n─────────────────────────────────────────\nPREGUNTA DE CALIFICACIÓN ESTÁNDAR:\n─────────────────────────────────────────\nUsar en Opción A y B cuando no hay calificación automática previa:\n\"¿Representas una tienda/empresa de tecnología, necesitas equipos al por \nmayor para uso interno, o es para otro propósito?\"\n\nInterpreta la respuesta así en el Paso 2:\n  → \"tienda\" / \"tengo local\" / \"empresa\" / \"uso interno\"  → Perfil Comercial\n  → \"revendo\" / \"revendedor\" SIN nombre de empresa/tienda → Usuario Final\n  → \"personal\" / \"para mí\" / \"al detal\"                  → Usuario Final\n\nIMPORTANTE: Un revendedor independiente sin empresa o tienda registrada NO es\nPerfil Comercial. Para ser Perfil Comercial DEBE tener un nombre de empresa o\nnombre de tienda que proporcionar. Si solo dice \"revendo por mi cuenta\" o\n\"soy revendedor independiente\" sin local/empresa, trátalo como Usuario Final.\n\n─────────────────────────────────────────\nPASO 1: Filtrado y Calificación Inicial\n─────────────────────────────────────────\n\nOpción A (Si preguntan por productos, marcas o categorías):\n\nAcción Técnica Obligatoria — ANTES de responder, ejecuta la herramienta \nconsultar_productos_sheets. Esta herramienta no recibe parámetros, simplemente \ndevuelve todas las filas del catálogo con las columnas 'categoria' y 'marca'.\n\nUna vez que tengas la respuesta, busca TÚ MISMO si la categoría o marca \nmencionada por el usuario aparece en alguna fila. La comparación debe ser \nflexible e insensible a mayúsculas (ej. \"asus\" debe coincidir con \"Asus\", \n\"laptop\" con \"Laptops\").\n\nCRÍTICO - REGLA DE EXCLUSIÓN DE REPUESTOS Y CONSUMIBLES:\nAnaliza con cuidado qué tipo de producto busca el usuario. \n  - SÍ MANEJAMOS: Equipos completos (Laptops, UPS, Monitores, Impresoras) y Componentes de Computación / Periféricos comerciales (disponibles bajo la categoría \"Accesorios\").\n  - NO MANEJAMOS: Repuestos técnicos de reparación, piezas internas específicas (ej. \"cabezal de impresora\", \"pantalla de repuesto\", \"baterías internas sueltas\").\n\nInterpreta el resultado así:\n\n  → SI encuentras coincidencia:\n     Responde en máximo 3 oraciones: confirma el producto, establece que \n     eres mayorista exclusivo para empresas/tiendas, y cierra con la \n     pregunta de calificación estándar. Nada más.\n\n     Ejemplo guía (primer mensaje):\n     \"¡Hola! Sí, manejamos [marca/categoría]. 🤝 Somos distribuidores \n     exclusivos al por mayor para empresas y tiendas de tecnología. \n     ¿Representas una tienda o empresa de tecnología, necesitas equipos \n     al por mayor para uso interno, o es para otro propósito?\"\n\n     Ejemplo guía (conversación en curso):\n     \"Sí, manejamos [marca/categoría]. Somos distribuidores exclusivos \n     al por mayor para empresas y tiendas. ¿Representas una tienda o \n     empresa de tecnología, necesitas equipos al por mayor para uso \n     interno, o es para otro propósito?\"\n\n     PROHIBIDO en esta respuesta: mencionar garantías, rotación de \n     inventario, reposición, frases de bienvenida adicionales o más \n     de una pregunta.\n\n  → SI NO encuentras coincidencia:\n     Ejemplo guía (primer mensaje):\n     \"¡Hola! En este momento esa marca o producto no forma parte de \n     nuestro portafolio activo, pero manejamos un amplio catálogo de \n     tecnología. ¿Hay alguna otra categoría en la que pueda orientarte?\"\n\n     Ejemplo guía (conversación en curso):\n     \"En este momento esa marca o producto no forma parte de nuestro \n     portafolio activo, pero manejamos un amplio catálogo de tecnología. \n     ¿Hay alguna otra categoría en la que pueda orientarte?\"\n\n  → SI la herramienta falla o no devuelve datos:\n     \"Manejamos un portafolio amplio de tecnología al por mayor. \n     ¿Me indicas si tu requerimiento es para una tienda o empresa?\"\n\nIMPORTANTE: Nunca respondas sobre disponibilidad sin haber ejecutado primero \nla herramienta consultar_productos_sheets.\n\n─────────────────────────────────────────\nOpción B (Si preguntan por \"precios\", \"cotización\" o \"catálogo\"):\n─────────────────────────────────────────\nResponde en máximo 3 oraciones: saluda (solo si es primer mensaje), establece \nque eres mayorista exclusivo, y cierra con la pregunta de calificación estándar.\n\nEjemplo guía (primer mensaje):\n\"¡Hola! Qué gusto que quieras crecer con nosotros. 🤝 Somos distribuidores \nexclusivos al por mayor para empresas y tiendas de tecnología. ¿Representas \nuna tienda o empresa de tecnología, necesitas equipos al por mayor para uso \ninterno, o es para otro propósito?\"\n\nEjemplo guía (conversación en curso):\n\"Somos distribuidores exclusivos al por mayor para empresas y tiendas de \ntecnología. ¿Representas una tienda o empresa de tecnología, necesitas \nequipos al por mayor para uso interno, o es para otro propósito?\"\n\n─────────────────────────────────────────\nPASO 2: Bifurcación del Perfil\n─────────────────────────────────────────\n\n▸ Perfil Comercial (Dueño de tienda, revendedor, empresa, uso interno)\n\nSolicita los datos de registro en un solo mensaje con lista numerada:\n\"Perfecto. 🤝 Para asignarte un asesor de tu zona, necesito registrar \ntu empresa. Por favor, envíame estos datos en un solo mensaje:\n  1. Nombre de contacto\n  2. Nombre de la empresa o tienda\n  3. RIF Jurídico (o identificación fiscal)\n  4. Ubicación exacta (Ciudad y Estado)\n  5. Número de WhatsApp de contacto\"\n\nAcción Técnica Obligatoria — registrar_leads_bd:\nAntes de ejecutar la herramienta, VALIDA que tienes los 5 campos completos:\n\n  CAMPO              VÁLIDO SI...\n  nombre_contacto  → tiene nombre y apellido (o al menos nombre). NUNCA null.\n  nombre_empresa   → tiene nombre de empresa o tienda. NUNCA null.\n  rif              → tiene un código de identificación. NUNCA null.\n  ubicacion        → DEBE incluir ciudad Y estado (ej. \"Judibana, Estado Falcón\").\n                     Si solo tiene ciudad sin estado → pide el estado explícitamente.\n  whatsapp         → es un número de teléfono (solo dígitos). NUNCA null.\n\nSi algún campo falta o es ambiguo, solicita ESE campo específico en 1 oración\ny NO llames registrar_leads_bd hasta tenerlo. NUNCA registres con null o vacíos.\n\nUna vez que los 5 campos estén completos y validados, ejecuta INMEDIATAMENTE la herramienta \nregistrar_leads_bd con los siguientes parámetros:\n\n  - nombre_contacto:   [extraído del mensaje]\n  - nombre_empresa:    [extraído del mensaje]\n  - rif:               [extraído del mensaje]\n  - ubicacion:         [extraído del mensaje]\n  - whatsapp:          [extraído del mensaje]\n  - canal:             [detectado automáticamente según plataforma de origen]\n  - productos_interes: [LISTA_PRODUCTOS_INTERES]\n      → Lista acumulada de productos/marcas/categorías mencionados en toda \n        la conversación. Si no se mencionó ningún producto, envía: []\n  - perfil_cliente:    [PERFIL_CLIENTE]\n      → Respuesta del usuario a la pregunta de calificación o señal \n        explícita detectada. Si no se capturó ninguna, envía: null\n\nCierre: Tras ejecutar la herramienta, confirma en 1-2 oraciones:\n\"Listo, tu empresa quedó registrada. En breve, un asesor de tu zona \nte contactará para darte el acceso formal. ¡Éxitos!\"\n\n─────────────────────────────────────────\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n5. Detección de Despedida (Acción Técnica Global)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEsta regla se aplica en TODOS los mensajes entrantes, sin excepción, de forma \nparalela al flujo de conversación.\n\nAnaliza semánticamente el mensaje del usuario para determinar si constituye \nuna despedida o cierre de conversación. Considera como despedida:\n  - Despedidas explícitas: \"adiós\", \"chao\", \"hasta luego\", \"nos vemos\", \n    \"bye\", \"hasta pronto\"\n  - Cierres de gestión: \"eso es todo\", \"era lo que necesitaba\", \"listo \n    gracias\", \"ya con eso\", \"muchas gracias, eso es todo\"\n  - Agradecimientos finales con cierre implícito: \"gracias, luego te \n    escribo\", \"ok perfecto, quedo pendiente\"\n\nAcción Técnica Obligatoria: En cada respuesta que generes, incluye al final \ndel JSON de salida la siguiente estructura completa:\n\n{\n  \"es_despedida\": true | false,\n  \"fue_registrado\": true | false,\n  \"productos_interes\": Categoria de Interes\n}\n\n  → \"es_despedida\": true si el mensaje es despedida, false si no lo es.\n  → \"fue_registrado\": true ÚNICAMENTE si en este turno ejecutaste exitosamente \n    la herramienta registrar_leads_bd. En cualquier otro caso: false.\n  → \"productos_interes\": siempre refleja el estado actualizado de la lista \n    acumulada en ese momento."
+        }
+      },
+      "id": "c60d45ed-2ffa-44fe-89fa-bad60f54b4d5",
+      "name": "Carlos",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        576,
+        -192
+      ],
+      "typeVersion": 1.6,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/{{ $('Mapear Datos del Cliente').item.json['Cuenta ID'] }}/conversations/{{ $('Mapear Datos del Cliente').item.json['Conversacion ID'] }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": {{ JSON.stringify($json.output.message) }},\n  \"message_type\": \"outgoing\",\n  \"private\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1232,
+        -288
+      ],
+      "id": "35a93b4f-76ce-466a-842f-04940cec34bf",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hj95ZDAWvqzmT3yP",
+          "name": "ChatWoot Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "event-type-check-001",
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "message_created",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "d9ecd84d-b873-4ca9-a9aa-e7b627d4a809",
+              "leftValue": "={{ $json.body.messages[0].sender_id }}{{ $json.body.conversation.messages[0].sender_id }}",
+              "rightValue": "={{ $json.body.entry[0].messaging[0].recipient.id }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "da606c8f-d5cb-4995-a252-df65020d81a5",
+              "leftValue": "={{ $json.body.messages[0].sender.type }}{{ $json.body.conversation.messages[0].sender_type }}",
+              "rightValue": "Contact",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "a1b65831-466c-474c-bbdb-451d2597cb0c",
+              "leftValue": "={{ $json.body.messages[0].content }}{{ $json.body.conversation.messages[0].content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1376,
+        -176
+      ],
+      "id": "40b6598f-18ea-4c39-ba4a-bdc26f9f211b",
+      "name": "¿Es mensaje procesable?"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "carlos",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1584,
+        -176
+      ],
+      "id": "accd39b8-a2c0-4f7d-b1a5-179b160d6214",
+      "name": "Recepción Chatwoot",
+      "webhookId": "555be22c-684e-42b7-a0e1-afaf8fa37f31",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "MtAK0J8DS5OPuMrd",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/MtAK0J8DS5OPuMrd",
+          "cachedResultName": "Registro de Leads DB"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "WhatsApp": "={{ $fromAI(\"whatsapp\") }}",
+            "Nombre de Contacto": "={{ $fromAI(\"nombre_de_contacto\") }}",
+            "Nombre de la empresa": "={{ $fromAI(\"nombre_de_la_empresa\") }}",
+            "RIF": "={{ $fromAI(\"rif\") }}",
+            "Ubicación": "={{ $fromAI(\"ubicacion\") }}",
+            "Canal": "={{ $fromAI(\"canal\") }}",
+            "Interes": "={{ $fromAI(\"productos_interes\") }}",
+            "Tipo": "={{ $fromAI(\"perfil_cliente\") }}",
+            "campana": "={{ $('Edit Fields5').item.json['campaña'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Nombre de Contacto",
+              "displayName": "Nombre de Contacto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Nombre de la empresa",
+              "displayName": "Nombre de la empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "RIF",
+              "displayName": "RIF",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Ubicación",
+              "displayName": "Ubicación",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "WhatsApp",
+              "displayName": "WhatsApp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "Canal",
+              "displayName": "Canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Interes",
+              "displayName": "Interes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Tipo",
+              "displayName": "Tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "campana",
+              "displayName": "campana",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        256
+      ],
+      "id": "a381dab3-13c1-4a0d-8120-e846301aec63",
+      "name": "registrar_leads_bd"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "o3-mini",
+          "mode": "list",
+          "cachedResultName": "o3-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        0
+      ],
+      "id": "fa84a54d-9f66-4f22-a65b-3dc404c895ec",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "rtRO1EHvTNyX51mI",
+          "name": "Agente Leads"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23b785c3-f38e-4706-80b7-51f333bba3bd",
+              "name": "mensaje",
+              "type": "string",
+              "value": "={{ $json.body.content }}{{ $json.body.messages[0].content }}"
+            },
+            {
+              "id": "1174b8a3-158a-4f5e-b882-a40e36c32dd8",
+              "name": "Sender ID",
+              "value": "={{ $json.body.conversation.messages[0].sender_id }}{{ $('Recepción Chatwoot').item.json.body.messages[0].sender_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9b63e1dc-e9d3-499a-a84c-1316c623f50c",
+              "name": "Conversacion ID",
+              "value": "={{ $json.body.conversation.messages[0].conversation_id }}{{ $json.body.messages[0].conversation_id }}",
+              "type": "number"
+            },
+            {
+              "id": "6ddda15e-fe61-4823-a579-5663f2ebc2ad",
+              "name": "timestamp",
+              "value": "={{ DateTime.fromSeconds($json.body.messages[0].created_at).setZone('America/Caracas').toFormat('dd/MM/yyyy HH:mm') }}{{ DateTime.fromSeconds($json.body.conversation.messages[0].created_at).setZone('America/Caracas').toFormat('dd/MM/yyyy HH:mm') }}",
+              "type": "string"
+            },
+            {
+              "id": "8f235aa6-5d95-4c1c-8a66-60d4a57c364f",
+              "name": "Cuenta ID",
+              "value": "={{ $json.body.account.id }}{{ $json.body.messages[0].account_id }}",
+              "type": "number"
+            },
+            {
+              "id": "aec2917d-9b82-4151-bd77-cc499eecf04e",
+              "name": "Canal",
+              "value": "={{ $json.body.conversation.channel.split('::')[1] }}{{ $json.body.channel.split('::')[1]  }}",
+              "type": "string"
+            },
+            {
+              "id": "f1a2b3c4-d5e6-7890-abcd-ef1234567890",
+              "name": "instagram_source_id",
+              "value": "={{ $json.body.conversation.contact_inbox.source_id }}{{ $json.body.contact_inbox.source_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dd93509f-3505-4c34-8bbc-b2818053eb8d",
+      "name": "Mapear Datos del Cliente",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -1120,
+        -192
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1168,
+        16
+      ],
+      "id": "d72fed0e-8e9c-4571-bc89-3e01d3a0cd4d",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ (() => { const convId = $('Mapear Datos del Cliente').item.json['Conversacion ID']; const canal = $('Mapear Datos del Cliente').item.json.Canal || ''; const c = $json['campaña'] || null; const campana = c ? `'${c.replace(/'/g, \"''\")}'` : 'NULL'; return `INSERT IGNORE INTO conversaciones (conversacion_id, canal, campana) VALUES (${convId}, '${canal}', ${campana})`; })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        -192
+      ],
+      "id": "d0cdbb37-bebd-415d-8b98-9fefe740db24",
+      "name": "Registrar Conversacion",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fue-registrado-check-001",
+              "leftValue": "={{ $('Carlos').item.json.output.fue_registrado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1648,
+        -128
+      ],
+      "id": "dd927613-cf13-49db-812e-9f0e05c3850d",
+      "name": "¿Fue Registrado?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones SET es_calificado = 'Calificado' WHERE conversacion_id = {{ $('Mapear Datos del Cliente').item.json['Conversacion ID'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1856,
+        -208
+      ],
+      "id": "53137812-4329-4849-bd69-0539794f55dc",
+      "name": "Marcar Calificado",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones SET es_calificado = 'No Calificado' WHERE conversacion_id = {{ $('Mapear Datos del Cliente').item.json['Conversacion ID'] }} AND es_calificado IS NULL",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1856,
+        -48
+      ],
+      "id": "ba3fafc9-fa3d-4c93-9481-8645053ad692",
+      "name": "Marcar No Calificado",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Limpiar Buffer de Conversación": {
+      "main": [
+        [
+          {
+            "node": "Consultar Campaña Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ciclo de Debounce (7s)": {
+      "main": [
+        [
+          {
+            "node": "Consultar Historial Temporal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pasaron 7s de silencio": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpiar Buffer de Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ciclo de Debounce (7s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Historial Temporal": {
+      "main": [
+        [
+          {
+            "node": "Pasaron 7s de silencio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar Mensaje a Cola": {
+      "main": [
+        [
+          {
+            "node": "Consultar Historial Temporal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Registrar Conversacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Conversacion": {
+      "main": [
+        [
+          {
+            "node": "Carlos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Campaña Meta": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_productos_sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "Carlos",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Carlos",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Cerrar Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Carlos",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carlos": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es mensaje procesable?": {
+      "main": [
+        [
+          {
+            "node": "Mapear Datos del Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recepción Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "¿Es mensaje procesable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "registrar_leads_bd": {
+      "ai_tool": [
+        [
+          {
+            "node": "Carlos",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Carlos",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Datos del Cliente": {
+      "main": [
+        [
+          {
+            "node": "Agregar Mensaje a Cola",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerrar Chat": {
+      "main": [
+        [
+          {
+            "node": "¿Fue Registrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Fue Registrado?": {
+      "main": [
+        [
+          {
+            "node": "Marcar Calificado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marcar No Calificado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "59851e28-df73-401f-95ac-45e34dc80850",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1683493ca79f362f0cdd6311bf11f1609621e8cd207e078485d8ca15ccb3975a"
+  },
+  "id": "qPJ5YoWf55RxpzfB",
+  "tags": []
+}

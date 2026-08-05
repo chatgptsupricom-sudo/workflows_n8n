@@ -1,0 +1,337 @@
+{
+  "name": "Meta - Captura Campaña Instagram",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meta-instagram-referral",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        16
+      ],
+      "id": "25c169b0-2ad6-4f47-af7f-3b7691668235",
+      "name": "Webhook Meta (POST)",
+      "webhookId": "meta-instagram-referral"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ignorar mensajes echo (enviados por la pagina/Carlos)\nconst body = $input.first().json.body;\nconst results = [];\n\nconst entries = body?.entry || [];\nfor (const entry of entries) {\n  const messaging = entry?.messaging || [];\n  for (const msg of messaging) {\n    if (msg?.message?.is_echo === true) continue;\n\n    const referral = msg?.referral || msg?.message?.referral;\n    if (!referral) continue;\n\n    const instagram_id = msg?.sender?.id;\n    if (!instagram_id) continue;\n\n    results.push({\n      instagram_id: instagram_id.toString(),\n      ad_id: referral.ad_id || null,\n      adset_id: referral.adset_id || null,\n      campaign_id: referral.campaign_id || null,\n      ad_title: referral.ads_context_data?.ad_title || null,\n      source: referral.source || null,\n      ref: referral.ref || null,\n      timestamp: msg.timestamp || null\n    });\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -240
+      ],
+      "id": "e3f608b9-0644-49d1-beaf-dfe735817c33",
+      "name": "Extraer Referral"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-001",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.referral }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -80
+      ],
+      "id": "57a97eca-2fa4-4fba-9448-7514d6013137",
+      "name": "¿Tiene campaña?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        -64
+      ],
+      "id": "bc9f1b76-8279-46b5-b4ce-f8a9ae914061",
+      "name": "Responder OK"
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $('Limpiar Body').item.json.cleanBody }}",
+        "dataPropertyName": "cleanBody",
+        "secret": "228924df2407ae6156161cbc74f9570e"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -64
+      ],
+      "id": "ecf9f877-a5b1-4484-832c-9b9329aa4773",
+      "name": "Calcular Firma"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://chatwoot.supricom.com.ve/webhooks/instagram",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-hub-signature-256",
+              "value": "=sha256={{ $json.cleanBody }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Limpiar Body').item.json.cleanBody }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1456,
+        -64
+      ],
+      "id": "2f89e52f-bc94-480e-bc01-3be4b1150db5",
+      "name": "Reenviar a Chatwoot"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = JSON.parse(JSON.stringify($('Webhook Meta (POST)').item.json.body));\n\nfor (const entry of body.entry || []) {\n  for (const msg of entry.messaging || []) {\n    if (msg.message) delete msg.message.referral;\n    delete msg.referral;\n  }\n}\n\nreturn [{ json: { cleanBody: JSON.stringify(body) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        -64
+      ],
+      "id": "5ebfe6fc-2935-42fc-badd-4c37c6457593",
+      "name": "Limpiar Body"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=meta_campaign:{{ $json.instagram_id }}",
+        "value": "={{ JSON.stringify({ campaign_name: $json.ad_title, campaign_id: $json.campaign_id, ad_id: $json.ad_id, captured_at: new Date().toISOString() }) }}",
+        "expire": true,
+        "ttl": 86400
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -240
+      ],
+      "id": "43fa19bc-e12b-42e6-86d2-3922fb808e5f",
+      "name": "Guardar en Redis",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6f33ffc1-7887-4abb-81df-9c34f218c99f",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.is_echo }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        16
+      ],
+      "id": "f78e89d8-1fae-470e-a0ef-d34066b69ee8",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        272,
+        112
+      ],
+      "id": "944a4ecc-c628-4b4e-9931-d36247b44e81",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Meta (POST)": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Referral": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene campaña?": {
+      "main": [
+        [
+          {
+            "node": "Extraer Referral",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpiar Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Body": {
+      "main": [
+        [
+          {
+            "node": "Calcular Firma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Firma": {
+      "main": [
+        [
+          {
+            "node": "Reenviar a Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reenviar a Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene campaña?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en Redis": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "70a0d241-a0d3-44d7-91d8-f308f584467e",
+  "meta": {
+    "instanceId": "1683493ca79f362f0cdd6311bf11f1609621e8cd207e078485d8ca15ccb3975a"
+  },
+  "id": "gmQSbpwrPMu18wq4",
+  "tags": []
+}

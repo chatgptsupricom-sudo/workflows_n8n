@@ -1,0 +1,618 @@
+{
+  "name": "SUPRICOM - Alerta Leads por Tiempo en Status",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            },
+            {
+              "field": "cronExpression",
+              "expression": "0 15 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "209b545c-dd62-4d3e-ab05-566f23a94360",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        -1552
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  l.id,\n  l.name,\n  l.nombre_contacto,\n  l.telefono,\n  l.status,\n  l.seller_id,\n  l.whatsapp_link,\n  l.ubicacion_estado,\n  l.campana,\n  l.fecha_ingreso,\n  CASE \n    WHEN l.status = 'NUEVO' THEN l.fecha_ingreso\n    ELSE COALESCE(\n      (SELECT MAX(h.fecha_cambio) FROM leads_status_history h WHERE h.lead_id = l.id),\n      l.updated_at\n    )\n  END AS fecha_ultimo_status\nFROM leads l\nWHERE \n  l.status NOT IN ('CERRADO', 'GANADO', 'PERDIDO')\n  AND l.seller_id IS NOT NULL\nORDER BY fecha_ultimo_status ASC",
+        "options": {}
+      },
+      "id": "820ced37-73a7-4563-902d-aace5161b265",
+      "name": "MySQL - Traer Leads Activos",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        -1232
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const LIMITES = {\n  'NUEVO': 24,\n  'CONTACTADO': 48,\n  'EN NEGOCIACION': 72\n};\n\nconst HORAS_ADVERTENCIA_NUEVO = 2;\n\nconst resultados = [];\n\nfor (const item of $input.all()) {\n  const lead = item.json;\n\n  if (!lead || typeof lead !== 'object') continue;\n\n  const status = (lead.status || '').toUpperCase().trim();\n  const limitHoras = LIMITES[status];\n\n  if (!limitHoras) continue;\n\n  const fechaStatus = new Date(lead.fecha_ultimo_status);\n  const ahora = new Date();\n  const diffMs = ahora.getTime() - fechaStatus.getTime();\n  const horasSinCambio = Math.floor(diffMs / (1000 * 60 * 60));\n  const horasRestantes = limitHoras - horasSinCambio;\n\n  let tipoAlerta = null;\n\n  if (status === 'NUEVO') {\n    if (horasSinCambio >= limitHoras) {\n      tipoAlerta = 'VENCIDO';\n    } else if (horasRestantes <= HORAS_ADVERTENCIA_NUEVO) {\n      tipoAlerta = 'ADVERTENCIA';\n    }\n  } else {\n    // CONTACTADO y EN NEGOCIACION: solo alerta cuando vence\n    if (horasSinCambio >= limitHoras) {\n      tipoAlerta = 'VENCIDO';\n    }\n  }\n\n  if (!tipoAlerta) continue;\n\n  resultados.push({\n    json: {\n      ...lead,\n      tipoAlerta,\n      horasSinCambio,\n      horasRestantes: horasRestantes > 0 ? horasRestantes : 0,\n      limitHoras,\n      updatedAtFormateado: fechaStatus.toLocaleString('es-VE', {\n        timeZone: 'America/Caracas'\n      })\n    }\n  });\n}\n\nreturn resultados;"
+      },
+      "id": "5fea40a7-f450-4ffd-b675-24355cc99bc6",
+      "name": "Code - Calcular Horas en Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -1072
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_alerta",
+              "leftValue": "={{ $json.tipoAlerta }}",
+              "rightValue": true,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ffcbc884-2f81-4bb6-b40f-9899a0d9f9dc",
+      "name": "IF - Necesita Alerta",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -912
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  s.id AS seller_id,\n  s.name AS seller_name,\n  s.whatsapp AS seller_whatsapp,\n  uc.email AS seller_email\nFROM sellers s\nINNER JOIN users_config uc ON s.user_id = uc.id\nWHERE s.id = {{ $json.seller_id }}\nAND s.activo = 1\nLIMIT 1",
+        "options": {}
+      },
+      "id": "7cebe4c7-caaf-4aae-accb-d8c7aa692544",
+      "name": "MySQL - Obtener Vendedor",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        -768
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst admin = $('MySQL - Obtener ADmin Leads').first().json;\nconst resultados = [];\n\nfunction formatearTiempo(horas) {\n  if (horas < 24) {\n    return horas + ' hora' + (horas !== 1 ? 's' : '');\n  }\n  const dias = Math.floor(horas / 24);\n  const resto = horas % 24;\n  if (resto === 0) {\n    return dias + ' día' + (dias !== 1 ? 's' : '');\n  }\n  return dias + ' día' + (dias !== 1 ? 's' : '') + ' y ' + resto + ' hora' + (resto !== 1 ? 's' : '');\n}\n\nfor (let i = 0; i < allItems.length; i++) {\n  const d = allItems[i].json;\n\n  const seller = {\n    seller_name: d.seller_name_real || d.seller_name,\n    seller_email: d.seller_email_real || d.seller_email,\n    seller_whatsapp: d.seller_whatsapp_real || d.seller_whatsapp\n};\n\n  const lead = {\n    name: d.lead_name || d.name,\n    nombre_contacto: d.lead_nombre_contacto || d.nombre_contacto,\n    status: d.lead_status || d.status,\n    tipoAlerta: d.lead_tipoAlerta || d.tipoAlerta,\n    horasSinCambio: d.lead_horasSinCambio || d.horasSinCambio,\n    horasRestantes: d.lead_horasRestantes !== undefined ? d.lead_horasRestantes : d.horasRestantes,\n    limitHoras: d.lead_limitHoras || d.limitHoras,\n    updatedAtFormateado: d.lead_updatedAtFormateado || d.updatedAtFormateado\n};\n\n  if (!seller.seller_email || !lead.status) continue;\n\n  const esAdvertencia = lead.tipoAlerta === 'ADVERTENCIA';\n  const esNuevoVencido = lead.status === 'NUEVO' && lead.tipoAlerta === 'VENCIDO';\n  const clienteNombre = lead.name || lead.nombre_contacto;\n\n  const emailSubject = esAdvertencia\n    ? '⚠️ Último aviso: ' + clienteNombre + ' vence en ' + formatearTiempo(lead.horasRestantes) + ' — será reasignado'\n    : '🔴 Lead vencido: ' + clienteNombre + ' lleva ' + formatearTiempo(lead.horasSinCambio) + ' en ' + lead.status;\n\n  const alertaBanner = esAdvertencia\n    ? '<div style=\"background:#FFF3CD;border-left:4px solid #FFC107;padding:16px;margin-bottom:16px;border-radius:4px;\">'\n      + '<p style=\"margin:0;color:#856404;font-weight:bold;\">⚠️ ÚLTIMA OPORTUNIDAD</p>'\n      + '<p style=\"margin:8px 0 0;color:#856404;\">Este lead vence en <strong>' + formatearTiempo(lead.horasRestantes) + '</strong>. Si no es contactado será <strong>reasignado a otro vendedor</strong>.</p>'\n      + '</div>'\n    : '<div style=\"background:#F8D7DA;border-left:4px solid #E74C3C;padding:16px;margin-bottom:16px;border-radius:4px;\">'\n      + '<p style=\"margin:0;color:#721C24;font-weight:bold;\">🔴 LEAD VENCIDO</p>'\n      + '<p style=\"margin:8px 0 0;color:#721C24;\">Este lead lleva <strong>' + formatearTiempo(lead.horasSinCambio) + '</strong> en status <strong>' + lead.status + '</strong> sin ser atendido.</p>'\n      + '</div>';\n\n  const tiempoEnStatus = lead.status === 'NUEVO'\n    ? '<strong style=\"color:#E74C3C;\">' + formatearTiempo(lead.horasSinCambio) + '</strong>'\n      + '<span style=\"color:#888;font-size:12px;\"> (límite: ' + formatearTiempo(lead.limitHoras) + ')</span>'\n    : '<strong style=\"color:#E74C3C;\">' + formatearTiempo(lead.horasSinCambio) + '</strong>';\n\n  const emailHTML = '<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">'\n    + '<div style=\"background:#0066CC;color:white;padding:20px;border-radius:8px 8px 0 0;\">'\n    + '<h2 style=\"margin:0;\">🔔 Alerta de Lead - SUPRICOM</h2>'\n    + '</div>'\n    + '<div style=\"border:1px solid #ddd;padding:24px;border-radius:0 0 8px 8px;\">'\n    + '<p>Hola <strong>' + seller.seller_name + '</strong>,</p>'\n    + '<p>El siguiente lead requiere tu atención inmediata:</p>'\n    + alertaBanner\n    + '<table style=\"width:100%;border-collapse:collapse;margin:16px 0;\">'\n    + '<tr style=\"background:#f5f5f5;\">'\n    + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;width:40%;\">Cliente</td>'\n    + '<td style=\"padding:10px;border:1px solid #ddd;\">' + clienteNombre + '</td>'\n    + '</tr>'\n    + '<tr>'\n    + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;\">Status actual</td>'\n    + '<td style=\"padding:10px;border:1px solid #ddd;\"><strong style=\"color:#E74C3C;\">' + lead.status + '</strong></td>'\n    + '</tr>'\n    + '<tr style=\"background:#f5f5f5;\">'\n    + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;\">Tiempo en status</td>'\n    + '<td style=\"padding:10px;border:1px solid #ddd;\">' + tiempoEnStatus + '</td>'\n    + '</tr>'\n    + '<tr>'\n    + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;\">En status desde</td>'\n    + '<td style=\"padding:10px;border:1px solid #ddd;\">' + lead.updatedAtFormateado + '</td>'\n    + '</tr>'\n    + '</table>'\n    + '<hr style=\"border:1px solid #eee;margin:20px 0;\">'\n    + '<p style=\"font-size:12px;color:#999;margin:0;\">SUPRICOM · Tu mayorista de confianza 🦁</p>'\n    + '</div></div>';\n\n  let adminEmailHTML = null;\n  let adminEmailSubject = null;\n\n  if (esNuevoVencido) {\n    adminEmailSubject = '🔁 Reasignación requerida: ' + clienteNombre + ' lleva ' + formatearTiempo(lead.horasSinCambio) + ' en NUEVO';\n    adminEmailHTML = '<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">'\n      + '<div style=\"background:#721C24;color:white;padding:20px;border-radius:8px 8px 0 0;\">'\n      + '<h2 style=\"margin:0;\">🔁 Lead pendiente de reasignación - SUPRICOM</h2>'\n      + '</div>'\n      + '<div style=\"border:1px solid #ddd;padding:24px;border-radius:0 0 8px 8px;\">'\n      + '<p>Hola <strong>' + admin.admin_name + '</strong>,</p>'\n      + '<p>El siguiente lead en status <strong>NUEVO</strong> ha vencido sin ser contactado y requiere reasignación:</p>'\n      + '<table style=\"width:100%;border-collapse:collapse;margin:16px 0;\">'\n      + '<tr style=\"background:#f5f5f5;\">'\n      + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;width:40%;\">Cliente</td>'\n      + '<td style=\"padding:10px;border:1px solid #ddd;\">' + clienteNombre + '</td>'\n      + '</tr>'\n      + '<tr>'\n      + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;\">Vendedor actual</td>'\n      + '<td style=\"padding:10px;border:1px solid #ddd;\">' + seller.seller_name + '</td>'\n      + '</tr>'\n      + '<tr style=\"background:#f5f5f5;\">'\n      + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;\">Tiempo en NUEVO</td>'\n      + '<td style=\"padding:10px;border:1px solid #ddd;\"><strong style=\"color:#E74C3C;\">' + formatearTiempo(lead.horasSinCambio) + '</strong>'\n      + ' <span style=\"color:#888;font-size:12px;\">(límite: ' + formatearTiempo(lead.limitHoras) + ')</span></td>'\n      + '</tr>'\n      + '<tr>'\n      + '<td style=\"padding:10px;font-weight:bold;border:1px solid #ddd;\">En status desde</td>'\n      + '<td style=\"padding:10px;border:1px solid #ddd;\">' + lead.updatedAtFormateado + '</td>'\n      + '</tr>'\n      + '</table>'\n      + '<div style=\"background:#F8D7DA;border-left:4px solid #E74C3C;padding:16px;border-radius:4px;\">'\n      + '<p style=\"margin:0;color:#721C24;font-weight:bold;\">Por favor reasigna este lead a otro vendedor disponible.</p>'\n      + '</div>'\n      + '<hr style=\"border:1px solid #eee;margin:20px 0;\">'\n      + '<p style=\"font-size:12px;color:#999;margin:0;\">SUPRICOM · Tu mayorista de confianza 🦁</p>'\n      + '</div></div>';\n  }\n\n  let waParam1 = '', waParam2 = '', waParam3 = '', waParam4 = '';\n\n  if (lead.status === 'NUEVO' && lead.tipoAlerta === 'ADVERTENCIA') {\n    waParam1 = seller.seller_name;\n    waParam2 = clienteNombre;\n    waParam3 = formatearTiempo(lead.horasSinCambio);\n    waParam4 = formatearTiempo(lead.horasRestantes);\n  } else if (lead.status === 'NUEVO' && lead.tipoAlerta === 'VENCIDO') {\n    waParam1 = seller.seller_name;\n    waParam2 = clienteNombre;\n    waParam3 = formatearTiempo(lead.horasSinCambio);\n  } else if (lead.tipoAlerta === 'VENCIDO') {\n    waParam1 = seller.seller_name;\n    waParam2 = clienteNombre;\n    waParam3 = formatearTiempo(lead.horasSinCambio);\n    waParam4 = lead.status;\n  }\n\n  resultados.push({\n    json: {\n      sellerEmail: seller.seller_email,\n      sellerName: seller.seller_name,\n      sellerWhatsapp: seller.seller_whatsapp,\n      emailSubject,\n      emailHTML,\n      adminEmail: esNuevoVencido ? admin.admin_email : null,\n      adminEmailHTML,\n      adminEmailSubject,\n      tipoAlerta: lead.tipoAlerta,\n      esNuevoVencido,\n      clienteNombre,\n      leadStatus: lead.status,\n      horasSinCambio: lead.horasSinCambio,\n      horasRestantes: lead.horasRestantes,\n      waParam1,\n      waParam2,\n      waParam3,\n      waParam4\n    }\n  });\n}\n\nreturn resultados;"
+      },
+      "id": "7361002e-9068-4629-a870-d91123125077",
+      "name": "Code - Armar Mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  uc.email AS admin_email,\n  uc.name AS admin_name\nFROM users_config uc\nWHERE uc.role_id = 8\nLIMIT 1",
+        "options": {}
+      },
+      "id": "1807c21c-7f55-41aa-afee-6c13452169d3",
+      "name": "MySQL - Obtener ADmin Leads",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        -1392
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "525651c5-1848-4bad-9169-4720c1b670ad",
+              "leftValue": "={{ $json.esNuevoVencido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        -448
+      ],
+      "id": "22445562-0dae-4279-bbb7-b8ab9d4f57f8",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.adminEmail }}",
+        "subject": "={{ $json.adminEmailSubject }}",
+        "message": "={{ $json.adminEmailHTML }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -464
+      ],
+      "id": "1e4cebf5-50f7-4bd7-a0d9-29d0ff525618",
+      "name": "Send a message1",
+      "webhookId": "27b16e7a-a347-4a0a-b626-43af88684d04",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "if-es-nuevo",
+              "leftValue": "={{ $json.leadStatus }}",
+              "rightValue": "NUEVO",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -16,
+        -448
+      ],
+      "id": "6db2066b-6fd2-4bb7-9eb7-d0175f169547",
+      "name": "IF - Es NUEVO"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "if-es-advertencia",
+              "leftValue": "={{ $json.tipoAlerta }}",
+              "rightValue": "ADVERTENCIA",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        112,
+        -704
+      ],
+      "id": "c935e582-8956-463b-978f-e2c70dd8bafa",
+      "name": "IF - Es ADVERTENCIA"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "1082511111623191",
+        "recipientPhoneNumber": "={{ $json.sellerWhatsapp }}",
+        "template": "nuevo_advertencia_faltan_2h_para_vencer|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.waParam1 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam2 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam3 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam4 }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -848
+      ],
+      "id": "96d6dd12-4d9f-4658-b396-876bc537f10a",
+      "name": "WA - Nuevo Advertencia",
+      "webhookId": "2be7a922-12c1-48a8-8ca9-7506deb173c4",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "o7lhZtRw7dq7dX7o",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "1082511111623191",
+        "recipientPhoneNumber": "={{ $json.sellerWhatsapp }}",
+        "template": "alerta_nuevo_vencido|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.waParam1 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam2 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam3 }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -656
+      ],
+      "id": "cd5c1a91-fe88-42c7-b5f2-56f499b4d54f",
+      "name": "WA - Nuevo Vencido",
+      "webhookId": "3642c845-738c-4186-9b78-97b7da133c71",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "o7lhZtRw7dq7dX7o",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "1082511111623191",
+        "recipientPhoneNumber": "={{ $json.sellerWhatsapp }}",
+        "template": "alerta_status_vencido|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.waParam1 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam2 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam3 }}"
+                  },
+                  {
+                    "text": "={{ $json.waParam4 }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        -288
+      ],
+      "id": "096ea840-e64f-42ab-85fe-ee636d3541a8",
+      "name": "WA - Status Vencido",
+      "webhookId": "ce9edaea-6503-4436-8f09-896c4cf4cc61",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "o7lhZtRw7dq7dX7o",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allSellers = $input.all();\nconst allLeads = $('IF - Necesita Alerta').all();\n\nconst resultados = [];\n\nfor (let i = 0; i < allSellers.length; i++) {\n  const seller = allSellers[i].json;\n  const lead = allLeads[i]?.json;\n\n  if (!seller || !lead) continue;\n\n  resultados.push({\n    json: {\n      ...seller,\n      ...lead,\n      seller_name_real: seller.seller_name,\n      seller_email_real: seller.seller_email,\n      seller_whatsapp_real: seller.seller_whatsapp\n    }\n  });\n}\n\nreturn resultados;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -608
+      ],
+      "id": "ce62d738-37fc-4b40-b800-198a758a9d15",
+      "name": "Code - Combinar Lead y Vendedor"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.sellerEmail }}",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailHTML }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        -448
+      ],
+      "id": "7cedddd1-abcb-4863-9160-0867e575fbca",
+      "name": "Send a message",
+      "webhookId": "15ba143e-a02f-476f-a51a-32a5513fe9ff",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "km7PyKWLEZgHHMzw",
+          "name": "chatgprsupricom@gmail.com"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "MySQL - Obtener ADmin Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL - Traer Leads Activos": {
+      "main": [
+        [
+          {
+            "node": "Code - Calcular Horas en Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Calcular Horas en Status": {
+      "main": [
+        [
+          {
+            "node": "IF - Necesita Alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Necesita Alerta": {
+      "main": [
+        [
+          {
+            "node": "MySQL - Obtener Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "MySQL - Obtener Vendedor": {
+      "main": [
+        [
+          {
+            "node": "Code - Combinar Lead y Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Armar Mensajes": {
+      "main": [
+        [
+          {
+            "node": "IF - Es NUEVO",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL - Obtener ADmin Leads": {
+      "main": [
+        [
+          {
+            "node": "MySQL - Traer Leads Activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Es NUEVO": {
+      "main": [
+        [
+          {
+            "node": "IF - Es ADVERTENCIA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WA - Status Vencido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Es ADVERTENCIA": {
+      "main": [
+        [
+          {
+            "node": "WA - Nuevo Advertencia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WA - Nuevo Vencido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Combinar Lead y Vendedor": {
+      "main": [
+        [
+          {
+            "node": "Code - Armar Mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WA - Nuevo Vencido": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0be792e6-88c3-4a17-b9fc-ba2c6037cfb2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1683493ca79f362f0cdd6311bf11f1609621e8cd207e078485d8ca15ccb3975a"
+  },
+  "id": "ESl2g2qK5x2PvVoh",
+  "tags": []
+}

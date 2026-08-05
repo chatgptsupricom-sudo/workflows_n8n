@@ -1,0 +1,552 @@
+{
+  "name": "Chatwoot - Cierre o Recordatorio por Último Mensaje",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/1/conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "open"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ad138035-cb55-43ef-8932-aa62bee3d054",
+      "name": "📋 Traer Chats Abiertos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -304,
+        752
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YgTLSLIAP1bjOm9v",
+          "name": "ChatWoot Acount"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data.payload",
+        "options": {}
+      },
+      "id": "8d11a1ee-657c-44f6-8661-cb3479a169ff",
+      "name": "🔀 Split Conversaciones",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/1/conversations/{{ $json.id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "2d1fcd12-9287-4a41-81a7-7725b71e2ad4",
+      "name": "💬 Traer Mensajes del Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        368,
+        752
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YgTLSLIAP1bjOm9v",
+          "name": "ChatWoot Acount"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4b5d9bb7-f228-4372-9eb7-97fc3617f925",
+      "name": "🚫 ¿Ignorar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        992,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/toggle_status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "resolved"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ccbfa0e4-3bc9-45ee-a80d-cfc15bc9f5d2",
+      "name": "✅ Cerrar Conversación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1456,
+        608
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hj95ZDAWvqzmT3yP",
+          "name": "ChatWoot Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "¡Hola! 👋 Quedó pendiente tu proceso con nosotros. ¿Aún te interesa continuar? Aquí sigo, dime."
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5278ba0c-92f5-4578-b497-903af0ad63b6",
+      "name": "📩 Enviar Recordatorio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1472,
+        912
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hj95ZDAWvqzmT3yP",
+          "name": "ChatWoot Bot"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "2a949455-9c1d-486d-bff3-3ebd58e6f15b",
+      "name": "⏭️ Ignorar (no saliente)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-conv-id",
+              "name": "conversation_id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "6f0329c7-2a96-4154-aa9d-a5b969f91e10",
+      "name": "💾 Guardar Conv ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const {\n  conversation_id,\n  contact_name,\n  contact_username,\n  ultimo_mensaje_content,\n  ultimo_mensaje_type,\n  ultimo_mensaje_created_at,\n  ultimo_mensaje_fecha,\n  es_audio,\n  es_imagen,\n  labels\n} = $input.item.json;\n\nconst tieneEtiqueta = Array.isArray(labels) && labels.includes('recordatorio_enviado');\n\n// Si no hay contenido de mensaje, skip\nif (!ultimo_mensaje_content) {\n  return {\n    json: {\n      skip: true,\n      reason: 'Sin mensajes válidos',\n      conversation_id,\n      contact_name,\n      contact_username,\n      horas_transcurridas: null,\n      accion: 'ignorar'\n    }\n  };\n}\n\n// Si el último mensaje es entrante y es audio o imagen, ignorar\nif (ultimo_mensaje_type === 0 && (es_audio || es_imagen)) {\n  return {\n    json: {\n      skip: true,\n      reason: es_audio ? 'Último mensaje es audio entrante' : 'Último mensaje es imagen entrante',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: null,\n      accion: 'ignorar'\n    }\n  };\n}\n\n// Si el último mensaje es entrante y tiene etiqueta → quitar etiqueta (respondió)\nif (ultimo_mensaje_type === 0 && tieneEtiqueta) {\n  return {\n    json: {\n      skip: false,\n      reason: 'Cliente respondió, quitar etiqueta',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: null,\n      accion: 'quitar_etiqueta'\n    }\n  };\n}\n\n// Si el último mensaje es entrante sin etiqueta, ignorar\nif (ultimo_mensaje_type === 0) {\n  return {\n    json: {\n      skip: true,\n      reason: 'Último mensaje es entrante',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: null,\n      accion: 'ignorar'\n    }\n  };\n}\n\n// Calcular horas transcurridas\nconst ahoraUnix = Math.floor(Date.now() / 1000);\nconst horasTranscurridas = (ahoraUnix - ultimo_mensaje_created_at) / 3600;\n\n// Verificar mensaje de cierre\nconst MENSAJE_CIERRE = \"Listo, tu empresa quedó registrada. En breve, un asesor de tu zona te contactará para darte el acceso formal. ¡Éxitos!\";\nconst esMensajeCierre = ultimo_mensaje_content.trim() === MENSAJE_CIERRE.trim();\n\n// Si es mensaje de cierre, cerrar\nif (esMensajeCierre) {\n  return {\n    json: {\n      skip: false,\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      es_mensaje_cierre: true,\n      accion: 'cerrar'\n    }\n  };\n}\n\n// Si tiene etiqueta + último saliente + > 24h → cerrar\nif (tieneEtiqueta && horasTranscurridas > 24) {\n  return {\n    json: {\n      skip: false,\n      reason: 'Con etiqueta y más de 24h sin respuesta',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      es_mensaje_cierre: false,\n      accion: 'cerrar'\n    }\n  };\n}\n\n// Si tiene etiqueta + último saliente + < 24h → ignorar (esperando respuesta)\nif (tieneEtiqueta && horasTranscurridas <= 24) {\n  return {\n    json: {\n      skip: true,\n      reason: 'Ya tiene etiqueta, esperando respuesta',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      accion: 'ignorar'\n    }\n  };\n}\n\n// Sin etiqueta + último saliente + > 24h → cerrar sin recordatorio\nif (horasTranscurridas > 24) {\n  return {\n    json: {\n      skip: false,\n      reason: 'Más de 24h sin respuesta',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      es_mensaje_cierre: false,\n      accion: 'cerrar'\n    }\n  };\n}\n\nconst MENSAJE_NO_MAYORISTA = \"Entiendo. Somos mayoristas exclusivos y no manejamos ventas al detal, pero podemos referirte con un aliado en tu zona. ¿En qué Estado te encuentras?\";\nconst esMensajeNoMayorista = ultimo_mensaje_content.trim() === MENSAJE_NO_MAYORISTA.trim();\n\nif (esMensajeNoMayorista && horasTranscurridas > 24) {\n  return {\n    json: {\n      skip: false,\n      reason: 'No mayorista + más de 24h sin respuesta',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      es_mensaje_cierre: false,\n      accion: 'cerrar'\n    }\n  };\n}\n\nif (esMensajeNoMayorista && horasTranscurridas <= 24) {\n  return {\n    json: {\n      skip: true,\n      reason: 'No mayorista + menos de 24h, esperando respuesta',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      accion: 'ignorar'\n    }\n  };\n}\n\nconst MENSAJE_NO_CANAL = \"Gracias por tu mensaje. Por este canal gestionamos exclusivamente la atención a nuestros aliados comerciales, así que no es el medio indicado para este tipo de propuestas.\";\nconst esMensajeNoCanal = ultimo_mensaje_content.trim() === MENSAJE_NO_CANAL.trim();\n\nif (esMensajeNoCanal) {\n  return {\n    json: {\n      skip: true,\n      reason: 'Mensaje de canal no indicado, ignorar siempre',\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      accion: 'ignorar'\n    }\n  };\n}\n\n\n// Sin etiqueta + último saliente + < 24h → enviar recordatorio\n// Sin etiqueta + último saliente + < 24h\n// Solo enviar recordatorio si han pasado al menos X horas\nconst HORAS_MINIMAS = 6; // ajusta este valor\n\nif (horasTranscurridas < HORAS_MINIMAS) {\n  return {\n    json: {\n      skip: true,\n      reason: `Menos de ${HORAS_MINIMAS}h transcurridas`,\n      conversation_id,\n      contact_name,\n      contact_username,\n      ultimo_mensaje_content,\n      ultimo_mensaje_type,\n      ultimo_mensaje_fecha,\n      horas_transcurridas: Math.round(horasTranscurridas),\n      accion: 'ignorar'\n    }\n  };\n}\n\nreturn {\n  json: {\n    skip: false,\n    conversation_id,\n    contact_name,\n    contact_username,\n    ultimo_mensaje_content,\n    ultimo_mensaje_type,\n    ultimo_mensaje_fecha,\n    horas_transcurridas: Math.round(horasTranscurridas),\n    es_mensaje_cierre: false,\n    accion: 'recordatorio'\n  }\n};"
+      },
+      "id": "d4a285fa-8271-44c3-ac39-aa366e5cd72b",
+      "name": "🧠 Analizar Último Mensaje1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $input.item.json;\nconst messages = Array.isArray(raw.payload) ? raw.payload : [];\n\nconst conversationId =\n  (messages.length > 0 ? messages[0].conversation_id : null) ||\n  $('💾 Guardar Conv ID').item.json.conversation_id;\n\nconst contactName = \n  raw.meta?.contact?.name ||\n  messages.find(m => m.message_type === 0)?.sender?.name ||\n  'Desconocido';\n\nconst contactUsername =\n  raw.meta?.contact?.additional_attributes?.social_instagram_user_name ||\n  messages.find(m => m.message_type === 0)?.sender?.additional_attributes?.social_instagram_user_name ||\n  null;\n\nconst labels = raw.meta?.labels || [];\n\n// Incluir mensajes con texto, audio o imagen\nconst validMessages = messages.filter(m => {\n  if (m.message_type === 2) return false;\n  \n  const tieneTexto = m.content && m.content.trim() !== '';\n  const esAudio = m.attachments?.some(a => a.file_type === 'audio');\n  const esImagen = m.attachments?.some(a => ['image', 'ig_post', 'ig_reel'].includes(a.file_type));\n  \n  return tieneTexto || esAudio || esImagen;\n});\n\nif (validMessages.length === 0) {\n  return {\n    json: {\n      conversation_id: conversationId,\n      contact_name: contactName,\n      contact_username: contactUsername,\n      ultimo_mensaje_content: null,\n      ultimo_mensaje_type: null,\n      ultimo_mensaje_created_at: null,\n      ultimo_mensaje_fecha: null,\n      es_audio: false,\n      es_imagen: false,\n      error: 'Sin mensajes válidos'\n    }\n  };\n}\n\nvalidMessages.sort((a, b) => b.created_at - a.created_at);\nconst ultimo = validMessages[0];\n\nconst esAudio = ultimo.attachments?.some(a => a.file_type === 'audio') ?? false;\nconst esImagen = ultimo.attachments?.some(a => ['image', 'ig_post', 'ig_reel'].includes(a.file_type)) ?? false;\n\nlet ultimoContenido = ultimo.content;\nif (esAudio) ultimoContenido = '[audio]';\nif (esImagen) ultimoContenido = '[imagen]';\n\nconst fecha = new Date(ultimo.created_at * 1000);\nconst ultimo_mensaje_fecha_legible = fecha.toLocaleString('es-VE', {\n  timeZone: 'America/Caracas',\n  day: '2-digit',\n  month: '2-digit',\n  year: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit',\n  hour12: true\n});\n\nreturn {\n  json: {\n    conversation_id: conversationId,\n    contact_name: contactName,\n    contact_username: contactUsername,\n    labels: labels,\n    ultimo_mensaje_content: ultimoContenido,\n    ultimo_mensaje_type: ultimo.message_type,\n    ultimo_mensaje_created_at: ultimo.created_at,\n    ultimo_mensaje_fecha: ultimo_mensaje_fecha_legible,\n    es_audio: esAudio,\n    es_imagen: esImagen\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        752
+      ],
+      "id": "82110d91-9dbe-4dac-9f33-c1bc5d3d0cc3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "cerrar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "008af92f-9dd0-4ec7-adc8-74367f8f3290"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cerrar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "80351200-806f-4dee-a6e4-f4bb155cdbbc",
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "quitar_etiqueta",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Quitar Etiqueta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "27a4bb68-18ca-4373-8534-dad41cfeed7b",
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "recordatorio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Recordatorio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1216,
+        752
+      ],
+      "id": "6f850b41-358d-42f3-8023-adf54206e714",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"labels\": [\"recordatorio_enviado\"] }",
+        "options": {}
+      },
+      "id": "00ca786b-a725-4795-aabd-27371a902d05",
+      "name": "🏷️ Poner Etiqueta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1664,
+        912
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YgTLSLIAP1bjOm9v",
+          "name": "ChatWoot Acount"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.supricom.com.ve/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"labels\": [] }",
+        "options": {}
+      },
+      "id": "33167fe7-13e6-468d-8083-c3bac36db3e5",
+      "name": "🏷️ Quitar Etiqueta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1456,
+        768
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hj95ZDAWvqzmT3yP",
+          "name": "ChatWoot Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "5c35b4af-177d-4c0e-9d94-c1e57d4d93f3",
+      "name": "⏰ Cada 12 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -528,
+        752
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📋 Traer Chats Abiertos": {
+      "main": [
+        [
+          {
+            "node": "🔀 Split Conversaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Split Conversaciones": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar Conv ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Traer Mensajes del Chat": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🚫 ¿Ignorar?": {
+      "main": [
+        [
+          {
+            "node": "⏭️ Ignorar (no saliente)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Guardar Conv ID": {
+      "main": [
+        [
+          {
+            "node": "💬 Traer Mensajes del Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Analizar Último Mensaje1": {
+      "main": [
+        [
+          {
+            "node": "🚫 ¿Ignorar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "🧠 Analizar Último Mensaje1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "✅ Cerrar Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🏷️ Quitar Etiqueta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📩 Enviar Recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📩 Enviar Recordatorio": {
+      "main": [
+        [
+          {
+            "node": "🏷️ Poner Etiqueta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Cada 12 horas": {
+      "main": [
+        [
+          {
+            "node": "📋 Traer Chats Abiertos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "ee8dc4f4-e66f-4f75-9947-0f62197d539f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1683493ca79f362f0cdd6311bf11f1609621e8cd207e078485d8ca15ccb3975a"
+  },
+  "id": "f6C0V8r1n7em3gQ7",
+  "tags": []
+}

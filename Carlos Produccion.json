@@ -414,9 +414,7 @@
         -192
       ],
       "typeVersion": 1.6,
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000
+      "retryOnFail": false
     },
     {
       "parameters": {

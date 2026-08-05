@@ -191,6 +191,71 @@
     {
       "parameters": {
         "operation": "executeQuery",
+        "query": "SELECT COUNT(*) as cnt FROM leads WHERE telefono = '{{ $json.WhatsApp }}' AND fecha_ingreso > DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -960,
+        -160
+      ],
+      "id": "mysql-verificar-duplicado",
+      "name": "Verificar Duplicado",
+      "credentials": {
+        "mySql": {
+          "id": "D2jBVXzwxDQKZNau",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dedup-check-cnt",
+              "leftValue": "={{ $json.cnt }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -760,
+        -160
+      ],
+      "id": "if-ya-registrado",
+      "name": "¿Ya registrado?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -300
+      ],
+      "id": "noop-lead-duplicado",
+      "name": "Lead Duplicado (Ignorar)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
         "query": "CALL asignar_vendedor_rotacion_pa()",
         "options": {}
       },
@@ -822,6 +887,35 @@
     },
     "Normalizar Datos del Lead": {
       "main": [
+        [
+          {
+            "node": "Verificar Duplicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Duplicado": {
+      "main": [
+        [
+          {
+            "node": "¿Ya registrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya registrado?": {
+      "main": [
+        [
+          {
+            "node": "Lead Duplicado (Ignorar)",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Switch País",

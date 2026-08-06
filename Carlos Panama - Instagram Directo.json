@@ -239,6 +239,51 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cola-activa-pa-001",
+              "leftValue": "={{ $json.Mensaje }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -570,
+        -200
+      ],
+      "id": "a1b2c3d4-1111-0000-aaaa-000000000020",
+      "name": "¿Cola activa?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "a1b2c3d4-1111-0000-aaaa-000000000021",
+      "name": "NoOp Cola Vacía"
+    },
+    {
+      "parameters": {
         "rules": {
           "values": [
             {
@@ -800,7 +845,25 @@
       "main": [
         [
           {
+            "node": "¿Cola activa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Cola activa?": {
+      "main": [
+        [
+          {
             "node": "Pasaron 7s PA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp Cola Vacía",
             "type": "main",
             "index": 0
           }

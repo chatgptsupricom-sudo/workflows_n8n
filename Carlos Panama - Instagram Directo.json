@@ -11,10 +11,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -2000,
-        -200
+        -1856,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000001",
+      "id": "6582624a-3d54-4470-b3dd-6212e02fadf2",
       "name": "Webhook Carlos PA",
       "webhookId": "carlos-panama-ig-directo"
     },
@@ -29,10 +29,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        -1880,
-        -200
+        -1744,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000099",
+      "id": "c98ed95c-6425-4d77-91a5-e11ea23152fa",
       "name": "Responder OK PA"
     },
     {
@@ -62,10 +62,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1780,
-        -200
+        -1632,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000002",
+      "id": "e0f7cfce-8ed2-4b9e-9caf-0cab28b46fe3",
       "name": "¿Es echo?"
     },
     {
@@ -73,23 +73,23 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -1560,
-        0
+        -1424,
+        1120
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000003",
+      "id": "190d9f5e-5154-4b7c-ae1c-cfd986bfac07",
       "name": "NoOp Echo"
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body;\nconst messaging = body?.entry?.[0]?.messaging?.[0];\n\nif (!messaging) return [];\n\nconst psid = String(messaging?.sender?.id || '');\nconst texto = messaging?.message?.text || '';\n// Meta sends timestamp in milliseconds; Date.now() also in ms\nconst unixTs = messaging?.timestamp || Date.now();\nconst timestamp = new Date(unixTs).toISOString();\n\nconst referral = messaging?.referral || messaging?.message?.referral;\nconst has_referral = !!referral;\n\nreturn [{\n  json: {\n    psid,\n    texto,\n    timestamp,\n    unix_ts: unixTs,\n    has_referral,\n    campaign_name: referral?.ads_context_data?.ad_title || null,\n    campaign_id: referral?.campaign_id || null,\n    ad_id: referral?.ad_id || null,\n    adset_id: referral?.adset_id || null\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body;\nconst messaging = body?.entry?.[0]?.messaging?.[0];\n\nif (!messaging) return [];\n\nconst psid = String(messaging?.sender?.id || '');\nconst texto = messaging?.message?.text || '';\n// Meta sends timestamp in milliseconds; Date.now() also in ms\nconst unixTs = messaging?.timestamp || Date.now();\nconst d = new Date(unixTs);\nconst offsetMs = -5 * 60 * 60 * 1000;\nconst panamaTime = new Date(d.getTime() + offsetMs);\nconst pad = n => String(n).padStart(2, '0');\nconst timestamp = pad(panamaTime.getUTCDate()) + '/' + pad(panamaTime.getUTCMonth()+1) + '/' + panamaTime.getUTCFullYear() + ' ' + pad(panamaTime.getUTCHours()) + ':' + pad(panamaTime.getUTCMinutes());\n\nconst referral = messaging?.referral || messaging?.message?.referral;\nconst has_referral = !!referral;\n\nreturn [{\n  json: {\n    psid,\n    texto,\n    timestamp,\n    unix_ts: unixTs,\n    has_referral,\n    campaign_name: referral?.ads_context_data?.ad_title || null,\n    campaign_id: referral?.campaign_id || null,\n    ad_id: referral?.ad_id || null,\n    adset_id: referral?.adset_id || null\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1560,
-        -200
+        -1424,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000004",
+      "id": "1495311f-5241-4ad2-811f-04a5c5f37c5b",
       "name": "Extraer Datos PA"
     },
     {
@@ -119,10 +119,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1340,
-        -200
+        -1200,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000005",
+      "id": "276daf55-4a0f-4e49-abdb-e9e3bae62f2e",
       "name": "¿Tiene referral?"
     },
     {
@@ -136,10 +136,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -1120,
-        -400
+        -976,
+        720
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000006",
+      "id": "d8f1fb67-6ae1-4cd0-a001-af564bc84978",
       "name": "Guardar Campaña PA",
       "credentials": {
         "redis": {
@@ -176,10 +176,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1120,
-        -200
+        -976,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000007",
+      "id": "f6330ea2-d365-4fd0-9900-792e49140305",
       "name": "¿Tiene texto?"
     },
     {
@@ -187,210 +187,11 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -900,
-        0
+        -816,
+        1120
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000008",
+      "id": "f12e5b56-fb24-48fe-a54b-0cbbf6d70e61",
       "name": "NoOp Sin Texto"
-    },
-    {
-      "parameters": {
-        "operation": "push",
-        "list": "={{ $('Extraer Datos PA').item.json.psid.toString() }}",
-        "messageData": "={{ JSON.stringify({ mensaje: $('Extraer Datos PA').item.json.texto, timestamp: $('Extraer Datos PA').item.json.timestamp, psid: $('Extraer Datos PA').item.json.psid }) }}",
-        "tail": true
-      },
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [
-        -900,
-        -200
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000009",
-      "name": "Agregar a Cola PA",
-      "credentials": {
-        "redis": {
-          "id": "S83gW8p0Ur2w6Pv6",
-          "name": "Redis n8n"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "propertyName": "Mensaje",
-        "key": "={{ $('Extraer Datos PA').item.json.psid.toString() }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [
-        -680,
-        -200
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000010",
-      "name": "Consultar Cola PA",
-      "credentials": {
-        "redis": {
-          "id": "S83gW8p0Ur2w6Pv6",
-          "name": "Redis n8n"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "cola-activa-pa-001",
-              "leftValue": "={{ Array.isArray($json.Mensaje) && $json.Mensaje.length > 0 }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -570,
-        -200
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000020",
-      "name": "¿Cola activa?"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        -460,
-        0
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000021",
-      "name": "NoOp Cola Vacía"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ JSON.parse($json.Mensaje.slice(-1)[0]).psid.toString() }}",
-                    "rightValue": "={{ $('Extraer Datos PA').item.json.psid.toString() }}",
-                    "operator": {
-                      "type": "string",
-                      "operation": "notEquals"
-                    },
-                    "id": "psid-no-coincide-pa-001"
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "PSID no coincide"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "tiempo-cumplido-pa-001",
-                    "leftValue": "={{ (ts => DateTime.fromISO(ts).isValid ? DateTime.fromISO(ts).toMillis() : 0)(JSON.parse($json.Mensaje.slice(-1)[0]).timestamp) }}",
-                    "rightValue": "={{ $now.minus({ seconds: 5 }).toMillis() }}",
-                    "operator": {
-                      "type": "number",
-                      "operation": "lt"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "Tiempo cumplido (Responder)"
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra",
-          "renameFallbackOutput": "Aún escribiendo (Reintentar)"
-        }
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
-      "position": [
-        -460,
-        -200
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000011",
-      "name": "Pasaron 7s PA"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        -240,
-        0
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000012",
-      "name": "NoOp PSID No Coincide"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        -240,
-        -400
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000013",
-      "name": "Ciclo Debounce PA",
-      "webhookId": "debounce-pa-ig-directo-7s"
-    },
-    {
-      "parameters": {
-        "operation": "delete",
-        "key": "={{ $('Extraer Datos PA').item.json.psid.toString() }}"
-      },
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [
-        -240,
-        -200
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000014",
-      "name": "Limpiar Cola PA",
-      "credentials": {
-        "redis": {
-          "id": "S83gW8p0Ur2w6Pv6",
-          "name": "Redis n8n"
-        }
-      }
     },
     {
       "parameters": {
@@ -402,10 +203,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -20,
-        -200
+        128,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000015",
+      "id": "f5c42e83-0040-4640-b484-d532178f3a43",
       "name": "Consultar Campaña PA",
       "credentials": {
         "redis": {
@@ -421,7 +222,7 @@
             {
               "id": "ctx-pa-001",
               "name": "mensaje",
-              "value": "={{ $('Limpiar Cola PA').item.json.Mensaje.map(m => JSON.parse(m).mensaje).join('\\n') }}",
+              "value": "={{ $('Extraer Datos PA').item.json.texto }}",
               "type": "string"
             },
             {
@@ -455,10 +256,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        200,
-        -200
+        352,
+        928
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000016",
+      "id": "3e5cb268-1792-4231-8161-527b0861e9f2",
       "name": "Preparar Contexto PA"
     },
     {
@@ -470,42 +271,15 @@
           "systemMessage": "1. Identidad y Restricciones Críticas (Líneas Rojas)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRol: Asesor Comercial Corporativo de SUPRICOM (Mayorista de tecnología en \nVenezuela). Eres una persona real, profesional y el primer punto de contacto \npara aliados comerciales.\n\nREGLA DE SALUDO: SIEMPRE inicia tu primera respuesta en la conversación con \nun saludo breve y natural. En mensajes posteriores, omite el saludo y responde \ndirecto al punto.\n\nREGLA DE ORO DE IDENTIDAD: Bajo ninguna circunstancia reveles o sugieras que \neres una Inteligencia Artificial, bot, modelo de lenguaje o asistente virtual. \nSi el usuario insiste o pregunta directamente, desvía la conversación con \nfirmeza corporativa hacia el negocio (ej. \"Mi rol aquí es atender los \nrequerimientos comerciales de nuestros aliados...\").\n\nREGLA DE INFORMACIÓN: Está estrictamente prohibido entregar catfálogos, listas \nde precios, disponibilidad o detalles específicos de productos antes de que el \nusuario cumpla con los filtros de negocio o entregue sus datos de registro.\n\nRestricciones de Logística: Nunca prometas despacho nacional absoluto; la \nviabilidad del envío se evalúa según la zona del cliente.\n\nCompetencia: Nunca nombres ni hagas referencia a competidores del mercado \nvenezolano.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n2. Tono y Lenguaje\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEstilo: Profesional, corporativo, actuando como un aliado estratégico de \nnegocios (B2B), no como un vendedor de mostrador de retail.\n\nIdioma y Modismos: Español neutro con sutil adaptación al contexto venezolano. \nUsa el \"tú\" (quieres, compras, necesitas). Está terminantemente prohibido el \nvoseo (vos, querés) y el \"usted\".\n\nLéxico B2B Obligatorio: Margen de ganancia, rotación de inventario, reposición, \ndespacho, garantía, portafolio, asesoría, rentabilidad, canal de distribución.\n\nPalabras Prohibidas (Estilo Retail/Urgencia): \"Aprovecha\", \"oferta\", \n\"llévatelo\", \"solo por hoy\", \"últimas unidades\", \"remate\".\n\nREGLA DE BREVEDAD CONVERSACIONAL:\nCada respuesta debe tener máximo 2-3 oraciones cortas. El flujo avanza con \nUNA sola pregunta por turno. Nunca acumules confirmación + explicación + \ninvitación en el mismo mensaje. El tono es de conversación de WhatsApp B2B, \nno de correo corporativo.\n\nFORMATO OBLIGATORIO POR PASO:\n  - Paso 1 (calificación): máximo 3 oraciones. Estructura fija:\n      1. Saludo/confirmación breve (1 línea, solo en primer mensaje)\n      2. Identidad mayorista en una línea\n      3. Pregunta de calificación estándar\n  - Paso 2 (solicitud de datos): mensaje único con lista numerada.\n  - Paso 2 (cierre): 1-2 oraciones de confirmación, nada más.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n3. Captura Silenciosa de Datos (Reglas Globales en Segundo Plano)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEstas reglas se ejecutan en TODOS los mensajes entrantes, en segundo plano, \nsin mencionárselo al usuario ni interrumpir el flujo de conversación.\n\n─────────────────────────────────────────\n[LISTA_PRODUCTOS_INTERES]\n─────────────────────────────────────────\nACCIÓN: Analiza cada mensaje del usuario e identifica si menciona:\n  - Marcas: ASUS, HP, Canon, Logitech, TP-Link, Hikvision, Kingston, Ezviz, \n    u otras marcas tecnológicas.\n  - Categorías: laptops, impresoras, cámaras de seguridad, memorias, routers, \n    monitores, accesorios, etc.\n  - Modelos o referencias específicas de productos.\n\nACUMULACIÓN: Mantén una lista acumulada sin duplicados de todo lo mencionado \ndurante la conversación. No la muestres al usuario en ningún momento.\n\nENVÍO: Solo se utiliza al ejecutar registrar_leads_bd. Si no hay registro, \nno se envía.\n\n─────────────────────────────────────────\n[PERFIL_CLIENTE]\n─────────────────────────────────────────\nACCIÓN: Guarda internamente la respuesta del usuario a la pregunta de \ncalificación estándar, o cualquier señal explícita de calificación detectada \nen el mensaje inicial (ej. \"quiero comprar al mayor\", \"soy revendedor\").\n\nACUMULACIÓN: Guarda el valor en cuanto el usuario lo indique. No lo muestres \nal usuario en ningún momento.\n\nENVÍO: Solo se utiliza al ejecutar registrar_leads_bd. Si el usuario no \nlo ha indicado aún, el valor es: null\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n4. Flujo de Conversación y Calificación (Paso a Paso)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────\nREGLA DE DETECCIÓN DE PROVEEDOR/VENDEDOR EXTERNO:\n─────────────────────────────────────────\nAntes de ejecutar cualquier paso, analiza si el mensaje \ncorresponde a alguien que ofrece servicios o propuestas \noperativas A SUPRICOM (logística, envíos, tecnología interna, \nconsultoría, etc.).\n\nSeñales CLARAS de proveedor externo:\n  → \"ofrecerles nuestros servicios de X\"\n  → \"me gustaría contactar a su personal de compras/logística\"\n  → \"quiero presentarles una propuesta comercial\"\n  → \"quisiera agendar una reunión con su equipo interno\"\n  → \"trabajamos con empresas como la suya ofreciendo X\"\n\nNO es proveedor externo — es cliente potencial B2B:\n  → Quien menciona que tiene una tienda, taller, o negocio \n    de tecnología y quiere COMPRAR o trabajar como distribuidor\n  → Quien dice ser revendedor, agente autorizado, integrador \n    o técnico que necesita equipos o insumos\n  → Frases como \"somos agentes de X\", \"tenemos taller de X\", \n    \"queremos ser aliados comerciales como clientes\"\n\nEn caso de duda entre proveedor y cliente B2B, tratar \nsiempre como cliente potencial y ejecutar el Paso 1.\n\nAcción: No ejecutes ningún paso del flujo de calificación.\nNo solicites datos de registro. Responde de forma cordial \nen máximo 2 oraciones agradeciendo el contacto e indicando \nque por este canal solo se gestiona atención a aliados \ncomerciales y distribuidores.\n\nEjemplo guía:\n\"Gracias por tu mensaje. Por este canal gestionamos \nexclusivamente la atención a nuestros aliados comerciales, \nasí que no es el medio indicado para este tipo de propuestas.\"\n\n─────────────────────────────────────────\nREGLA DE CALIFICACIÓN AUTOMÁTICA:\n─────────────────────────────────────────\nAntes de ejecutar el Paso 1, analiza si el mensaje del usuario \nya contiene una calificación EXPLÍCITA Y CONFIRMADA.\n\nSolo considera calificación directa estas señales concretas:\n  → \"comprar al mayor\" / \"comprar al por mayor\"\n  → \"soy revendedor\" / \"soy distribuidor\"\n  → \"tengo una tienda\" / \"tengo un local\"\n  → \"es para mi empresa\" / \"compra corporativa\"\n  → \"quiero abrir cuenta de mayorista\"\n\nNO considera calificación directa:\n  → \"quiero ser aliado\" / \"cómo puedo ser aliado\"\n  → \"quiero trabajar con ustedes\"\n  → \"cómo funciona\"\n  → Cualquier frase de intención general sin confirmar \n    el tipo de negocio\n\nSi el mensaje contiene una señal directa confirmada, omite \nla pregunta de calificación estándar, guarda la señal como \n[PERFIL_CLIENTE], y salta directamente al Paso 2 tratándolo \ncomo Perfil Comercial.\n\nEn caso de duda, siempre ejecuta el Paso 1 con la pregunta \nde calificación estándar. Es mejor preguntar una vez más \nque saltarse el filtro.\n\n─────────────────────────────────────────\nREGLA DE PRIORIDAD DEL PASO 1:\n─────────────────────────────────────────\nAntes de activar la Opción A, determina si el mensaje es una CONSULTA de\nproducto o una DESCRIPCIÓN del negocio del cliente.\n\nES CONSULTA (activa Opción A):\n  → \"¿tienen X?\", \"venden X?\", \"manejan X?\", \"quiero X\", \"busco X\"\n  → Preguntar por disponibilidad, precio o catálogo de un producto\n\nES DESCRIPCIÓN DEL NEGOCIO (NO activa Opción A):\n  → \"revendo X\", \"vendo X\", \"trabajo con X\", \"mi tienda vende X\"\n  → El cliente describe lo que él mismo comercializa o su rubro\n  → Responder a la pregunta de calificación mencionando su producto\n  → \"soy técnico en X\", \"tengo taller de X\", \"me dedico a X\"\n\nSi es DESCRIPCIÓN DEL NEGOCIO: guarda la información como [PERFIL_CLIENTE],\ntrata al cliente como calificado (Perfil Comercial si tiene empresa/tienda),\ny avanza al Paso 2 directamente SIN consultar el catálogo.\n\nSolo activa la Opción A cuando el cliente PREGUNTA explícitamente si\nSUPRICOM maneja o vende algo.\n\n─────────────────────────────────────────\nPREGUNTA DE CALIFICACIÓN ESTÁNDAR:\n─────────────────────────────────────────\nUsar en Opción A y B cuando no hay calificación automática previa:\n\"¿Representas una tienda/empresa de tecnología, necesitas equipos al por \nmayor para uso interno, o es para otro propósito?\"\n\nInterpreta la respuesta así en el Paso 2:\n  → \"tienda\" / \"tengo local\" / \"empresa\" / \"uso interno\"  → Perfil Comercial\n  → \"revendo\" / \"revendedor\" SIN nombre de empresa/tienda → Usuario Final\n  → \"personal\" / \"para mí\" / \"al detal\"                  → Usuario Final\n\nIMPORTANTE: Un revendedor independiente sin empresa o tienda registrada NO es\nPerfil Comercial. Para ser Perfil Comercial DEBE tener un nombre de empresa o\nnombre de tienda que proporcionar. Si solo dice \"revendo por mi cuenta\" o\n\"soy revendedor independiente\" sin local/empresa, trátalo como Usuario Final.\n\n─────────────────────────────────────────\nPASO 1: Filtrado y Calificación Inicial\n─────────────────────────────────────────\n\nOpción A (Si preguntan por productos, marcas o categorías):\n\nAcción Técnica Obligatoria — ANTES de responder, ejecuta la herramienta \nconsultar_productos_sheets. Esta herramienta no recibe parámetros, simplemente \ndevuelve todas las filas del catálogo con las columnas 'categoria' y 'marca'.\n\nUna vez que tengas la respuesta, busca TÚ MISMO si la categoría o marca \nmencionada por el usuario aparece en alguna fila. La comparación debe ser \nflexible e insensible a mayúsculas (ej. \"asus\" debe coincidir con \"Asus\", \n\"laptop\" con \"Laptops\").\n\nCRÍTICO - REGLA DE EXCLUSIÓN DE REPUESTOS Y CONSUMIBLES:\nAnaliza con cuidado qué tipo de producto busca el usuario. \n  - SÍ MANEJAMOS: Equipos completos (Laptops, UPS, Monitores, Impresoras) y Componentes de Computación / Periféricos comerciales (disponibles bajo la categoría \"Accesorios\").\n  - NO MANEJAMOS: Repuestos técnicos de reparación, piezas internas específicas (ej. \"cabezal de impresora\", \"pantalla de repuesto\", \"baterías internas sueltas\").\n\nInterpreta el resultado así:\n\n  → SI encuentras coincidencia:\n     Responde en máximo 3 oraciones: confirma el producto, establece que \n     eres mayorista exclusivo para empresas/tiendas, y cierra con la \n     pregunta de calificación estándar. Nada más.\n\n     Ejemplo guía (primer mensaje):\n     \"¡Hola! Sí, manejamos [marca/categoría]. 🤝 Somos distribuidores \n     exclusivos al por mayor para empresas y tiendas de tecnología. \n     ¿Representas una tienda o empresa de tecnología, necesitas equipos \n     al por mayor para uso interno, o es para otro propósito?\"\n\n     Ejemplo guía (conversación en curso):\n     \"Sí, manejamos [marca/categoría]. Somos distribuidores exclusivos \n     al por mayor para empresas y tiendas. ¿Representas una tienda o \n     empresa de tecnología, necesitas equipos al por mayor para uso \n     interno, o es para otro propósito?\"\n\n     PROHIBIDO en esta respuesta: mencionar garantías, rotación de \n     inventario, reposición, frases de bienvenida adicionales o más \n     de una pregunta.\n\n  → SI NO encuentras coincidencia:\n     Ejemplo guía (primer mensaje):\n     \"¡Hola! En este momento esa marca o producto no forma parte de \n     nuestro portafolio activo, pero manejamos un amplio catálogo de \n     tecnología. ¿Hay alguna otra categoría en la que pueda orientarte?\"\n\n     Ejemplo guía (conversación en curso):\n     \"En este momento esa marca o producto no forma parte de nuestro \n     portafolio activo, pero manejamos un amplio catálogo de tecnología. \n     ¿Hay alguna otra categoría en la que pueda orientarte?\"\n\n  → SI la herramienta falla o no devuelve datos:\n     \"Manejamos un portafolio amplio de tecnología al por mayor. \n     ¿Me indicas si tu requerimiento es para una tienda o empresa?\"\n\nIMPORTANTE: Nunca respondas sobre disponibilidad sin haber ejecutado primero \nla herramienta consultar_productos_sheets.\n\n─────────────────────────────────────────\nOpción B (Si preguntan por \"precios\", \"cotización\" o \"catálogo\"):\n─────────────────────────────────────────\nResponde en máximo 3 oraciones: saluda (solo si es primer mensaje), establece \nque eres mayorista exclusivo, y cierra con la pregunta de calificación estándar.\n\nEjemplo guía (primer mensaje):\n\"¡Hola! Qué gusto que quieras crecer con nosotros. 🤝 Somos distribuidores \nexclusivos al por mayor para empresas y tiendas de tecnología. ¿Representas \nuna tienda o empresa de tecnología, necesitas equipos al por mayor para uso \ninterno, o es para otro propósito?\"\n\nEjemplo guía (conversación en curso):\n\"Somos distribuidores exclusivos al por mayor para empresas y tiendas de \ntecnología. ¿Representas una tienda o empresa de tecnología, necesitas \nequipos al por mayor para uso interno, o es para otro propósito?\"\n\n─────────────────────────────────────────\nPASO 2: Bifurcación del Perfil\n─────────────────────────────────────────\n\n▸ Perfil Comercial (Dueño de tienda, revendedor, empresa, uso interno)\n\nSolicita los datos de registro en un solo mensaje con lista numerada:\n\"Perfecto. 🤝 Para asignarte un asesor de tu zona, necesito registrar \ntu empresa. Por favor, envíame estos datos en un solo mensaje:\n  1. Nombre de contacto\n  2. Nombre de la empresa o tienda\n  3. RIF Jurídico (o identificación fiscal)\n  4. Ubicación exacta (Ciudad y Estado)\n  5. Número de WhatsApp de contacto\"\n\nAcción Técnica Obligatoria — registrar_leads_bd:\nAntes de ejecutar la herramienta, VALIDA que tienes los 5 campos completos:\n\n  CAMPO              VÁLIDO SI...\n  nombre_contacto  → tiene nombre y apellido (o al menos nombre). NUNCA null.\n  nombre_empresa   → tiene nombre de empresa o tienda. NUNCA null.\n  rif              → tiene un código de identificación. NUNCA null.\n  ubicacion        → DEBE incluir ciudad Y estado (ej. \"Judibana, Estado Falcón\").\n                     Si solo tiene ciudad sin estado → pide el estado explícitamente.\n  whatsapp         → es un número de teléfono (solo dígitos). NUNCA null.\n\nSi algún campo falta o es ambiguo, solicita ESE campo específico en 1 oración\ny NO llames registrar_leads_bd hasta tenerlo. NUNCA registres con null o vacíos.\n\nUna vez que los 5 campos estén completos y validados, ejecuta INMEDIATAMENTE la herramienta \nregistrar_leads_bd con los siguientes parámetros:\n\n  - nombre_contacto:   [extraído del mensaje]\n  - nombre_empresa:    [extraído del mensaje]\n  - rif:               [extraído del mensaje]\n  - ubicacion:         [extraído del mensaje]\n  - whatsapp:          [extraído del mensaje]\n  - canal:             [detectado automáticamente según plataforma de origen]\n  - productos_interes: [LISTA_PRODUCTOS_INTERES]\n      → Lista acumulada de productos/marcas/categorías mencionados en toda \n        la conversación. Si no se mencionó ningún producto, envía: []\n  - perfil_cliente:    [PERFIL_CLIENTE]\n      → Respuesta del usuario a la pregunta de calificación o señal \n        explícita detectada. Si no se capturó ninguna, envía: null\n\nCierre: Tras ejecutar la herramienta, confirma en 1-2 oraciones:\n\"Listo, tu empresa quedó registrada. En breve, un asesor de tu zona \nte contactará para darte el acceso formal. ¡Éxitos!\"\n\n─────────────────────────────────────────\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n5. Detección de Despedida (Acción Técnica Global)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEsta regla se aplica en TODOS los mensajes entrantes, sin excepción, de forma \nparalela al flujo de conversación.\n\nAnaliza semánticamente el mensaje del usuario para determinar si constituye \nuna despedida o cierre de conversación. Considera como despedida:\n  - Despedidas explícitas: \"adiós\", \"chao\", \"hasta luego\", \"nos vemos\", \n    \"bye\", \"hasta pronto\"\n  - Cierres de gestión: \"eso es todo\", \"era lo que necesitaba\", \"listo \n    gracias\", \"ya con eso\", \"muchas gracias, eso es todo\"\n  - Agradecimientos finales con cierre implícito: \"gracias, luego te \n    escribo\", \"ok perfecto, quedo pendiente\"\n\nAcción Técnica Obligatoria: En cada respuesta que generes, incluye al final \ndel JSON de salida la siguiente estructura completa:\n\n{\n  \"es_despedida\": true | false,\n  \"fue_registrado\": true | false,\n  \"productos_interes\": Categoria de Interes\n}\n\n  → \"es_despedida\": true si el mensaje es despedida, false si no lo es.\n  → \"fue_registrado\": true ÚNICAMENTE si en este turno ejecutaste exitosamente \n    la herramienta registrar_leads_bd. En cualquier otro caso: false.\n  → \"productos_interes\": siempre refleja el estado actualizado de la lista \n    acumulada en ese momento."
         }
       },
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000017",
+      "id": "3a5aa924-742b-4579-aa69-c215d66778ed",
       "name": "Carlos PA",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "position": [
-        420,
-        -200
+        576,
+        928
       ],
       "typeVersion": 1.6,
       "retryOnFail": false
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v18.0/277198852154436/messages",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "access_token",
-              "value": "REEMPLAZAR_CON_PAGE_ACCESS_TOKEN_PA"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\"recipient\":{\"id\":\"{{ $('Preparar Contexto PA').item.json.psid }}\"},\"message\":{\"text\":{{ JSON.stringify($json.output.message) }}}}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        640,
-        -200
-      ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000018",
-      "name": "Enviar Respuesta IG (⚠️ Configurar Token PA)"
     },
     {
       "parameters": {
@@ -521,17 +295,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        200,
-        100
+        352,
+        1232
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000022",
-      "name": "OpenAI Chat Model PA",
-      "credentials": {
-        "openAiApi": {
-          "id": "rtRO1EHvTNyX51mI",
-          "name": "Agente Leads"
-        }
-      }
+      "id": "29567165-3f70-49bc-8915-4fadb6395f89",
+      "name": "OpenAI Chat Model PA"
     },
     {
       "parameters": {
@@ -541,10 +309,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.4,
       "position": [
-        420,
-        100
+        528,
+        1216
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000023",
+      "id": "fbe017a4-b642-4f70-b7c7-c0ad3efb8205",
       "name": "Postgres Chat Memory PA",
       "credentials": {
         "postgres": {
@@ -560,10 +328,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        640,
-        100
+        784,
+        1232
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000024",
+      "id": "d06911bb-a6dd-443a-8aaa-53a96f34672f",
       "name": "Structured Output Parser PA"
     },
     {
@@ -689,10 +457,10 @@
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
       "position": [
-        420,
-        400
+        576,
+        1520
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000025",
+      "id": "6eb3896e-f1b1-4d21-b87c-07b55a56dd80",
       "name": "registrar_leads_bd PA"
     },
     {
@@ -716,10 +484,10 @@
       "type": "n8n-nodes-base.googleSheetsTool",
       "typeVersion": 4.7,
       "position": [
-        640,
-        400
+        784,
+        1520
       ],
-      "id": "a1b2c3d4-1111-0000-aaaa-000000000026",
+      "id": "26f031a9-4a00-4b48-830c-4b00f7ffbff3",
       "name": "consultar_productos_sheets PA",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -727,9 +495,190 @@
           "name": "Google Sheets account"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $('Extraer Datos PA').item.json.psid.toString() }}",
+        "messageData": "={{ JSON.stringify({ mensaje: $('Extraer Datos PA').item.json.texto, timestamp: $('Extraer Datos PA').item.json.timestamp, psid: $('Extraer Datos PA').item.json.psid }) }}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        928
+      ],
+      "id": "ef8a0aac-c7c1-4822-8095-971bd61c5885",
+      "name": "Agregar a Cola PA",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "Mensaje",
+        "key": "={{ $('Extraer Datos PA').item.json.psid.toString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        928
+      ],
+      "id": "0b440e4a-96ec-41f3-8204-9ac0eca64305",
+      "name": "Consultar Cola PA",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.Mensaje.slice(-1)[0]).psid.toString() }}",
+                    "rightValue": "={{ $('Extraer Datos PA').item.json.psid.toString() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "psid-no-coincide-pa-001"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PSID no coincide"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "tiempo-cumplido-pa-001",
+                    "leftValue": "={{ (ts => DateTime.fromISO(ts).isValid ? DateTime.fromISO(ts).toMillis() : 0)(JSON.parse($json.Mensaje.slice(-1)[0]).timestamp) }}",
+                    "rightValue": "={{ $now.minus({ seconds: 5 }).toMillis() }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Tiempo cumplido (Responder)"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Aún escribiendo (Reintentar)"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -288,
+        912
+      ],
+      "id": "d61e8dcc-a08c-476b-98ac-f34c4cf8e86d",
+      "name": "Pasaron 7s PA"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        672
+      ],
+      "id": "9916851a-1bb3-4c05-8310-72b3a178d44f",
+      "name": "NoOp PSID No Coincide"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -272,
+        1280
+      ],
+      "id": "80265aae-a902-4010-b3ce-d818c32259a4",
+      "name": "Ciclo Debounce PA",
+      "webhookId": "debounce-pa-ig-directo-7s"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('Extraer Datos PA').item.json.psid.toString() }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        928
+      ],
+      "id": "f3b5a6db-fc2d-4503-b489-7bb66ab90e42",
+      "name": "Limpiar Cola PA",
+      "credentials": {
+        "redis": {
+          "id": "S83gW8p0Ur2w6Pv6",
+          "name": "Redis n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/277198852154436/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "EAAdqZAUHRsC4BSNSwewkh3jQEJjuOlWLzw0aJeIQFoM4Au208oTrlN8HZB0bBmUiF1jQLhAw4GUm4DsX5TZC2SsMq9E6zvfsYMI6QdYwe6hxlDIZAINRHMFbvt75o8pVSw9D5dZB5NJ6M2on5ZA4rjFlfmComBf3Lv6lG11RRCe6oRXTo4nJECHTwW43VBXtICD0QghKrzcnAZCh9WiObkecebQE8FZACqTEKdvNZA6pfmIOv2Q5KO1kz9AZDZD"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\n    \"id\": \"{{ $('Preparar Contexto PA').item.json.psid.toString() }}\"\n  },\n  \"message\": {\n    \"text\": \"{{ $json.output.message }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "1ee21f8d-a31a-471b-8367-cb858c840642",
+      "name": "Enviar Instagram DM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        944,
+        928
+      ]
     }
   ],
-  "pinData": {},
   "connections": {
     "Webhook Carlos PA": {
       "main": [
@@ -829,93 +778,6 @@
         ]
       ]
     },
-    "Agregar a Cola PA": {
-      "main": [
-        [
-          {
-            "node": "Consultar Cola PA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Consultar Cola PA": {
-      "main": [
-        [
-          {
-            "node": "¿Cola activa?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Cola activa?": {
-      "main": [
-        [
-          {
-            "node": "Pasaron 7s PA",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "NoOp Cola Vacía",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Pasaron 7s PA": {
-      "main": [
-        [
-          {
-            "node": "NoOp PSID No Coincide",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Limpiar Cola PA",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Ciclo Debounce PA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ciclo Debounce PA": {
-      "main": [
-        [
-          {
-            "node": "Consultar Cola PA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Limpiar Cola PA": {
-      "main": [
-        [
-          {
-            "node": "Consultar Campaña PA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Consultar Campaña PA": {
       "main": [
         [
@@ -942,14 +804,13 @@
       "main": [
         [
           {
-            "node": "Enviar Respuesta IG (⚠️ Configurar Token PA)",
+            "node": "Enviar Instagram DM",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Enviar Respuesta IG (⚠️ Configurar Token PA)": {},
     "OpenAI Chat Model PA": {
       "ai_languageModel": [
         [
@@ -1004,7 +865,132 @@
           }
         ]
       ]
+    },
+    "Agregar a Cola PA": {
+      "main": [
+        [
+          {
+            "node": "Consultar Cola PA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Cola PA": {
+      "main": [
+        [
+          {
+            "node": "Pasaron 7s PA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pasaron 7s PA": {
+      "main": [
+        [
+          {
+            "node": "NoOp PSID No Coincide",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpiar Cola PA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ciclo Debounce PA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ciclo Debounce PA": {
+      "main": [
+        [
+          {
+            "node": "Consultar Cola PA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Cola PA": {
+      "main": [
+        [
+          {
+            "node": "Consultar Campaña PA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
+  },
+  "pinData": {
+    "Webhook Carlos PA": [
+      {
+        "headers": {
+          "host": "n8n.supricom.com.ve",
+          "user-agent": "facebookexternalua",
+          "content-length": "396",
+          "accept": "*/*",
+          "accept-encoding": "gzip, br",
+          "cdn-loop": "cloudflare; loops=1",
+          "cf-connecting-ip": "2a03:2880:21ff:48::",
+          "cf-ipcountry": "US",
+          "cf-ray": "a26f366b3a6dbcdd-ATL",
+          "cf-visitor": "{\"scheme\":\"https\"}",
+          "content-type": "application/json",
+          "instagram-api-version": "v26.0",
+          "x-forwarded-for": "2a03:2880:21ff:48::, 172.68.70.130",
+          "x-forwarded-host": "n8n.supricom.com.ve",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "28bb15f7f4c2",
+          "x-hub-signature": "sha1=9d23f3a587345edc22d29e6a4d08d5c969834e2b",
+          "x-hub-signature-256": "sha256=1512015af75aa3b5c9b285e29a9d01a017580fe8c32366c119aafa33b9a632df",
+          "x-real-ip": "172.68.70.130"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "object": "instagram",
+          "entry": [
+            {
+              "time": 1786031586938,
+              "id": "17841402281688531",
+              "messaging": [
+                {
+                  "sender": {
+                    "id": "1018548217709580"
+                  },
+                  "recipient": {
+                    "id": "17841402281688531"
+                  },
+                  "timestamp": 1786031586494,
+                  "message": {
+                    "mid": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDAyMjgxNjg4NTMxOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTU2MzgyMTU0Njk1Nzk3MDozMjk0NjQ2NzU4MzYzMjc1NDMzNzY4Nzc1NzgxMzQ0ODcwNAZDZD",
+                    "text": "test2"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "webhookUrl": "https://n8n.supricom.com.ve/webhook/carlos-panama",
+        "executionMode": "production"
+      }
+    ]
   },
   "active": false,
   "settings": {

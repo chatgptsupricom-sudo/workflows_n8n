@@ -81,7 +81,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body;\nconst messaging = body?.entry?.[0]?.messaging?.[0];\n\nif (!messaging) return [];\n\nconst psid = String(messaging?.sender?.id || '');\nconst texto = messaging?.message?.text || '';\n// Meta sends timestamp in milliseconds; Date.now() also in ms\nconst unixTs = messaging?.timestamp || Date.now();\nconst d = new Date(unixTs);\nconst offsetMs = -5 * 60 * 60 * 1000;\nconst panamaTime = new Date(d.getTime() + offsetMs);\nconst pad = n => String(n).padStart(2, '0');\nconst timestamp = pad(panamaTime.getUTCDate()) + '/' + pad(panamaTime.getUTCMonth()+1) + '/' + panamaTime.getUTCFullYear() + ' ' + pad(panamaTime.getUTCHours()) + ':' + pad(panamaTime.getUTCMinutes());\n\nconst referral = messaging?.referral || messaging?.message?.referral;\nconst has_referral = !!referral;\n\nreturn [{\n  json: {\n    psid,\n    texto,\n    timestamp,\n    unix_ts: unixTs,\n    has_referral,\n    campaign_name: referral?.ads_context_data?.ad_title || null,\n    campaign_id: referral?.campaign_id || null,\n    ad_id: referral?.ad_id || null,\n    adset_id: referral?.adset_id || null\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body;\nconst messaging = body?.entry?.[0]?.messaging?.[0];\n\nif (!messaging) return [];\n\nconst psid = String(messaging?.sender?.id || '');\nconst texto = messaging?.message?.text || '';\n// Meta sends timestamp in milliseconds; Date.now() also in ms\nconst unixTs = messaging?.timestamp || Date.now();\nconst timestamp = new Date(unixTs).toISOString();\n\nconst referral = messaging?.referral || messaging?.message?.referral;\nconst has_referral = !!referral;\n\nreturn [{\n  json: {\n    psid,\n    texto,\n    timestamp,\n    unix_ts: unixTs,\n    has_referral,\n    campaign_name: referral?.ads_context_data?.ad_title || null,\n    campaign_id: referral?.campaign_id || null,\n    ad_id: referral?.ad_id || null,\n    adset_id: referral?.adset_id || null\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -295,7 +295,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ JSON.parse($json.Mensaje.filter(m => m.trim().startsWith('{')).slice(-1)[0]).psid.toString() }}",
+                    "leftValue": "={{ JSON.parse($json.Mensaje.slice(-1)[0]).psid.toString() }}",
                     "rightValue": "={{ $('Extraer Datos PA').item.json.psid.toString() }}",
                     "operator": {
                       "type": "string",
@@ -320,11 +320,11 @@
                 "conditions": [
                   {
                     "id": "tiempo-cumplido-pa-001",
-                    "leftValue": "={{ DateTime.fromFormat(JSON.parse($json.Mensaje[0]).timestamp, 'dd/MM/yyyy HH:mm').toISO() }}",
-                    "rightValue": "={{ $now.minus({ seconds: 5 }).toISO() }}",
+                    "leftValue": "={{ DateTime.fromISO(JSON.parse($json.Mensaje.slice(-1)[0]).timestamp).toMillis() }}",
+                    "rightValue": "={{ $now.minus({ seconds: 5 }).toMillis() }}",
                     "operator": {
-                      "type": "dateTime",
-                      "operation": "before"
+                      "type": "number",
+                      "operation": "lt"
                     }
                   }
                 ],

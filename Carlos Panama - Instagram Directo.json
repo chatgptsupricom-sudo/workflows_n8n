@@ -243,18 +243,17 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict",
+            "typeValidation": "loose",
             "version": 3
           },
           "conditions": [
             {
               "id": "cola-activa-pa-001",
-              "leftValue": "={{ $json.Mensaje }}",
-              "rightValue": "",
+              "leftValue": "={{ Array.isArray($json.Mensaje) && $json.Mensaje.length > 0 }}",
+              "rightValue": true,
               "operator": {
-                "type": "array",
-                "operation": "exists",
-                "singleValue": true
+                "type": "boolean",
+                "operation": "equals"
               }
             }
           ],

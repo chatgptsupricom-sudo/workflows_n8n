@@ -30,7 +30,7 @@
           "conditions": [
             {
               "id": "echo-check-pa-001",
-              "leftValue": "={{ .body.entry[0].messaging[0].message.is_echo }}",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.is_echo }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",

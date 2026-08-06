@@ -320,7 +320,7 @@
                 "conditions": [
                   {
                     "id": "tiempo-cumplido-pa-001",
-                    "leftValue": "={{ DateTime.fromISO(JSON.parse($json.Mensaje.slice(-1)[0]).timestamp).toMillis() }}",
+                    "leftValue": "={{ (ts => DateTime.fromISO(ts).isValid ? DateTime.fromISO(ts).toMillis() : 0)(JSON.parse($json.Mensaje.slice(-1)[0]).timestamp) }}",
                     "rightValue": "={{ $now.minus({ seconds: 5 }).toMillis() }}",
                     "operator": {
                       "type": "number",

@@ -483,7 +483,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://graph.facebook.com/v18.0/me/messages",
+        "url": "https://graph.facebook.com/v18.0/277198852154436/messages",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [

@@ -73,7 +73,7 @@
           "conditions": [
             {
               "id": "cond-pais-pa",
-              "leftValue": "={{ $json.pais }}",
+              "leftValue": "={{ $('Normalizar Datos del Lead').item.json.pais }}",
               "rightValue": "PA",
               "operator": {
                 "type": "string",
@@ -106,7 +106,7 @@
           "conditions": [
             {
               "id": "32468143-84f8-4517-b1f0-7514e20a9941",
-              "leftValue": "={{ $json['Estado'] }}",
+              "leftValue": "={{ $('Normalizar Datos del Lead').item.json['Estado'] }}",
               "rightValue": "Carabobo",
               "operator": {
                 "type": "string",
@@ -115,7 +115,7 @@
             },
             {
               "id": "159ca313-4775-47e0-9a07-12100fece0f3",
-              "leftValue": "={{ $json['Estado'] }}",
+              "leftValue": "={{ $('Normalizar Datos del Lead').item.json['Estado'] }}",
               "rightValue": "Caracas",
               "operator": {
                 "type": "string",
@@ -124,7 +124,7 @@
             },
             {
               "id": "a4f7b681-653b-4548-88b8-82cf1e7497ac",
-              "leftValue": "={{ $json['Estado'] }}",
+              "leftValue": "={{ $('Normalizar Datos del Lead').item.json['Estado'] }}",
               "rightValue": "Distrito Capital",
               "operator": {
                 "type": "string",
